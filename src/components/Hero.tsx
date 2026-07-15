@@ -1,0 +1,85 @@
+import { motion } from 'framer-motion'
+import { ArrowDown } from 'lucide-react'
+
+export default function Hero() {
+  return (
+    <section id="top" className="relative h-screen min-h-[600px] w-full overflow-hidden">
+      <motion.div
+        initial={{ scale: 1.1 }}
+        animate={{ scale: 1 }}
+        transition={{ duration: 2, ease: 'easeOut' }}
+        className="absolute inset-0"
+      >
+        <img
+          src="/hero.jpg"
+          alt="A worker on a job site in Greater Accra holding a hard hat at sunset"
+          className="h-full w-full object-cover"
+          loading="eager"
+        />
+      </motion.div>
+
+      <div className="absolute inset-0 bg-gradient-to-t from-ink-950/80 via-ink-950/25 to-ink-950/40" />
+      <div className="absolute inset-0 bg-gradient-to-r from-ink-950/75 via-ink-950/30 to-transparent" />
+
+      <div className="relative z-10 flex h-full flex-col justify-end pb-20 sm:pb-24">
+        <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="max-w-2xl"
+          >
+            <p className="mb-4 text-sm font-medium uppercase tracking-[0.2em] text-cream-200/80">
+              Reintegration · Greater Accra
+            </p>
+            <h1 className="font-serif text-5xl font-medium leading-[1.05] text-cream-50 text-balance sm:text-6xl lg:text-7xl">
+              Go Beyond.{' '}
+              <span className="italic gradient-text">Hire Purpose.</span>
+            </h1>
+            <p className="mt-6 max-w-lg text-lg leading-relaxed text-cream-200/90 text-pretty">
+              Verified, skill-matched workers rebuilding their lives after
+              release — connected with employers across Greater Accra.
+              GPS-verified attendance. Secure mobile money payments.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            className="mt-8 flex items-center gap-4"
+          >
+            <a
+              href="#cta"
+              className="rounded-full bg-cream-50 px-7 py-3.5 text-base font-semibold text-ink-900 transition-all hover:bg-cream-100"
+            >
+              Hire a worker
+            </a>
+            <a
+              href="#about"
+              className="group inline-flex items-center gap-2 text-sm font-medium text-cream-200/90 transition-colors hover:text-cream-50"
+            >
+              Discover BeyondX
+              <ArrowDown size={16} className="transition-transform group-hover:translate-y-0.5" />
+            </a>
+          </motion.div>
+        </div>
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2 }}
+        className="absolute bottom-6 left-1/2 -translate-x-1/2"
+      >
+        <div className="flex h-9 w-5 justify-center rounded-full border border-cream-200/30 p-1">
+          <motion.div
+            animate={{ y: [0, 10, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="h-1.5 w-0.5 rounded-full bg-cream-200/60"
+          />
+        </div>
+      </motion.div>
+    </section>
+  )
+}
