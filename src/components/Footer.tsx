@@ -31,7 +31,7 @@ export default function Footer() {
               <li><a href="#how" className="transition-colors hover:text-forest-600">How it works</a></li>
               <li><a href="#workers" className="transition-colors hover:text-forest-600">Workers</a></li>
               <li><a href="#principles" className="transition-colors hover:text-forest-600">Principles</a></li>
-              <li><a href="#stories" className="transition-colors hover:text-forest-600">Stories</a></li>
+              <li><a href="#gallery" className="transition-colors hover:text-forest-600">Gallery</a></li>
             </ul>
           </div>
 

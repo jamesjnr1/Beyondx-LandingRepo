@@ -2,17 +2,18 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 import Logo from './Logo'
+import { useAuth } from './auth/AuthContext'
 
 const links = [
-  { label: 'How it works', href: '#how' },
-  { label: 'Workers', href: '#workers' },
-  { label: 'Principles', href: '#principles' },
-  { label: 'Stories', href: '#stories' },
+  { label: 'Home', href: '#top' },
+  { label: 'Meet the Team', href: '#team' },
+  { label: 'Gallery', href: '#gallery' },
 ]
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
+  const { open: openAuth } = useAuth()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
@@ -52,22 +53,22 @@ export default function Navbar() {
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
-          <a
-            href="#cta"
-            className={`rounded-full border px-5 py-2 text-sm font-medium transition-colors ${
+          <button
+            onClick={() => openAuth('worker-login')}
+            className={`rounded-full border px-5 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
               dark
                 ? 'border-cream-50/30 text-cream-50 hover:bg-cream-50/10'
                 : 'border-ink-900/15 text-ink-800 hover:bg-ink-900/5'
             }`}
           >
-            Sign in
-          </a>
-          <a
-            href="#cta"
-            className="rounded-full bg-forest-600 px-5 py-2 text-sm font-semibold text-cream-50 shadow-sm transition-all hover:bg-forest-500"
+            Worker Login
+          </button>
+          <button
+            onClick={() => openAuth('employer-login')}
+            className="rounded-full bg-forest-600 px-5 py-2 text-sm font-semibold text-cream-50 shadow-sm transition-all hover:bg-forest-500 active:scale-[0.97]"
           >
-            Hire a worker
-          </a>
+            Employer Login
+          </button>
         </div>
 
         <button
@@ -99,13 +100,18 @@ export default function Navbar() {
                   {l.label}
                 </a>
               ))}
-              <a
-                href="#cta"
-                onClick={() => setOpen(false)}
-                className="mt-2 rounded-full bg-forest-600 px-5 py-2.5 text-center text-sm font-semibold text-cream-50"
+              <button
+                onClick={() => { setOpen(false); openAuth('worker-login') }}
+                className="mt-2 rounded-full border border-ink-900/15 px-5 py-2.5 text-center text-sm font-medium text-ink-800 transition-colors hover:bg-ink-900/5"
               >
-                Hire a worker
-              </a>
+                Worker Login
+              </button>
+              <button
+                onClick={() => { setOpen(false); openAuth('employer-login') }}
+                className="rounded-full bg-forest-600 px-5 py-2.5 text-center text-sm font-semibold text-cream-50"
+              >
+                Employer Login
+              </button>
             </div>
           </motion.div>
         )}
