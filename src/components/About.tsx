@@ -6,8 +6,8 @@ const blocks = [
     eyebrow: 'Over BeyondX',
     title: 'Service at the highest level, for those who deserve a second chance.',
     body: 'BeyondX is a structured second-chance employment programme. We place vetted, skill-matched workers — people rebuilding their lives after release — into verified short-term roles with responsible employers across Greater Accra.',
-    image: 'https://images.pexels.com/photos/8961065/pexels-photo-8961065.jpeg?auto=compress&cs=tinysrgb&w=1200',
-    alt: 'A worker on a construction site in Ghana',
+    image: '/about.jpg',
+    alt: 'Certified workers in safety harnesses on a construction site in Greater Accra',
   },
   {
     eyebrow: 'How we work',
