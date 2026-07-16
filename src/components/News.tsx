@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion'
-import { Newspaper } from 'lucide-react'
 import { useReveal } from '../hooks/useReveal'
 
 export default function News() {
@@ -12,7 +11,7 @@ export default function News() {
             News &amp; Events
           </span>
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-forest-600/10">
-            <Newspaper className="text-forest-600" size={28} />
+            <img src="/icons/news.png" alt="" className="h-9 w-9 object-contain" />
           </div>
           <h2 className="font-serif text-3xl font-medium leading-tight text-ink-900 text-balance sm:text-4xl">
             No live news{' '}

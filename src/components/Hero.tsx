@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion'
-import { ArrowDown } from 'lucide-react'
+import { useAuth } from './auth/AuthContext'
 
 export default function Hero() {
+  const { open } = useAuth()
   return (
     <section id="top" className="relative h-screen min-h-[600px] w-full overflow-hidden">
       <motion.div
@@ -47,39 +48,23 @@ export default function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="mt-8 flex items-center gap-4"
+            className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4"
           >
-            <a
-              href="#cta"
-              className="rounded-full bg-cream-50 px-7 py-3.5 text-base font-semibold text-ink-900 transition-all hover:bg-cream-100"
+            <button
+              onClick={() => open('employer-login')}
+              className="rounded-full bg-cream-50 px-7 py-3.5 text-base font-semibold text-ink-900 transition-all hover:bg-cream-100 active:scale-[0.98]"
             >
               Hire a worker
-            </a>
-            <a
-              href="#about"
-              className="group inline-flex items-center gap-2 text-sm font-medium text-cream-200/90 transition-colors hover:text-cream-50"
+            </button>
+            <button
+              onClick={() => open('worker-login')}
+              className="rounded-full border border-cream-50/40 px-7 py-3.5 text-base font-semibold text-cream-50 backdrop-blur-sm transition-all hover:bg-cream-50/10 active:scale-[0.98]"
             >
-              Discover BeyondX
-              <ArrowDown size={16} className="transition-transform group-hover:translate-y-0.5" />
-            </a>
+              I'm looking for work
+            </button>
           </motion.div>
         </div>
       </div>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.2 }}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2"
-      >
-        <div className="flex h-9 w-5 justify-center rounded-full border border-cream-200/30 p-1">
-          <motion.div
-            animate={{ y: [0, 10, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="h-1.5 w-0.5 rounded-full bg-cream-200/60"
-          />
-        </div>
-      </motion.div>
     </section>
   )
 }
