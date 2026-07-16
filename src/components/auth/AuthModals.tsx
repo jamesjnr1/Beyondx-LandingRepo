@@ -33,13 +33,13 @@ function Modal({ title, subtitle, children }: { title: string; subtitle: string;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-ink-950/60 p-4 backdrop-blur-sm sm:items-center" onClick={close}>
-      <div className="relative my-4 w-full max-w-md rounded-2xl bg-cream-50 p-6 shadow-2xl sm:my-8 sm:p-8" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="relative my-4 w-full max-w-md rounded-2xl bg-cream-50 p-6 shadow-2xl sm:my-8 sm:p-8" onClick={(e) => e.stopPropagation()}>
         <button onClick={close} aria-label="Close" className="absolute right-4 top-4 rounded-full p-1.5 text-ink-700 transition-colors hover:bg-ink-900/5 hover:text-ink-900">
-          <X size={20} />
+          <X size={20} aria-hidden="true" />
         </button>
         <div className="mb-6 flex flex-col items-center text-center">
           <Logo tone="dark" className="h-8" />
-          <h2 className="mt-4 font-serif text-2xl font-medium text-ink-900">{title}</h2>
+          <h2 id="auth-modal-title" className="mt-4 font-serif text-2xl font-medium text-ink-900">{title}</h2>
           <p className="mt-1 text-sm text-ink-700">{subtitle}</p>
         </div>
         {children}
