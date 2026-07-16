@@ -1,7 +1,19 @@
-import { Instagram, Linkedin, Mail } from 'lucide-react'
+import { Instagram, Linkedin, Music2, Twitter, Mail } from 'lucide-react'
 import Logo from './Logo'
+import { useAuth } from './auth/AuthContext'
+
+const socials = [
+  { icon: Instagram, href: 'https://instagram.com/beyondx26', label: 'Instagram' },
+  { icon: Music2, href: 'https://www.tiktok.com/@beyondx26', label: 'TikTok' },
+  { icon: Twitter, href: 'https://x.com/beyondx26', label: 'X' },
+  { icon: Linkedin, href: 'https://www.linkedin.com/company/beyondx', label: 'LinkedIn' },
+  { icon: Mail, href: 'mailto:hello@beyondx.gh', label: 'Email' },
+]
 
 export default function Footer() {
+  const { go, open } = useAuth()
+  const linkCls = 'text-left transition-colors hover:text-forest-600'
+
   return (
     <footer className="border-t border-ink-900/8 bg-cream-100 py-16">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
@@ -12,36 +24,33 @@ export default function Footer() {
               Connecting verified, skill-matched workers rebuilding their lives
               with employers across Greater Accra.
             </p>
-            <div className="mt-5 flex items-center gap-3">
-              <a href="#" className="rounded-lg border border-ink-900/10 p-2 text-ink-700 transition-colors hover:bg-forest-600/5 hover:text-forest-600">
-                <Instagram size={18} />
-              </a>
-              <a href="#" className="rounded-lg border border-ink-900/10 p-2 text-ink-700 transition-colors hover:bg-forest-600/5 hover:text-forest-600">
-                <Linkedin size={18} />
-              </a>
-              <a href="#" className="rounded-lg border border-ink-900/10 p-2 text-ink-700 transition-colors hover:bg-forest-600/5 hover:text-forest-600">
-                <Mail size={18} />
-              </a>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              {socials.map(({ icon: Icon, href, label }) => (
+                <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}
+                  className="rounded-lg border border-ink-900/10 p-2 text-ink-700 transition-colors hover:bg-forest-600/5 hover:text-forest-600">
+                  <Icon size={18} />
+                </a>
+              ))}
             </div>
+            <p className="mt-3 text-xs text-ink-700/60">TikTok · IG · X: @beyondx26 · LinkedIn: Beyond X</p>
           </div>
 
           <div>
             <h4 className="mb-4 text-sm font-semibold text-ink-900">Pages</h4>
             <ul className="space-y-2.5 text-sm text-ink-700/70">
-              <li><a href="#how" className="transition-colors hover:text-forest-600">How it works</a></li>
-              <li><a href="#workers" className="transition-colors hover:text-forest-600">Workers</a></li>
-              <li><a href="#principles" className="transition-colors hover:text-forest-600">Principles</a></li>
-              <li><a href="#gallery" className="transition-colors hover:text-forest-600">Gallery</a></li>
+              <li><button onClick={() => go('home')} className={linkCls}>Home</button></li>
+              <li><button onClick={() => go('team')} className={linkCls}>Meet the Team</button></li>
+              <li><button onClick={() => go('gallery')} className={linkCls}>Gallery</button></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="mb-4 text-sm font-semibold text-ink-900">Services</h4>
+            <h4 className="mb-4 text-sm font-semibold text-ink-900">Access</h4>
             <ul className="space-y-2.5 text-sm text-ink-700/70">
-              <li><a href="#" className="transition-colors hover:text-forest-600">Hire a worker</a></li>
-              <li><a href="#" className="transition-colors hover:text-forest-600">Find work</a></li>
-              <li><a href="#" className="transition-colors hover:text-forest-600">Partner with us</a></li>
-              <li><a href="#" className="transition-colors hover:text-forest-600">Sign in</a></li>
+              <li><button onClick={() => open('employer-login')} className={linkCls}>Hire a worker</button></li>
+              <li><button onClick={() => open('worker-login')} className={linkCls}>Find work</button></li>
+              <li><button onClick={() => open('worker-login')} className={linkCls}>Worker Login</button></li>
+              <li><button onClick={() => open('employer-login')} className={linkCls}>Employer Login</button></li>
             </ul>
           </div>
 
