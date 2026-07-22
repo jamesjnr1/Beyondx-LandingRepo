@@ -48,6 +48,27 @@ export type Worker = {
   [k: string]: unknown
 }
 
+// Task lifecycle on the backend:
+//   open -> offered -> accepted -> pending_confirmation -> employer_confirmed / completed
+export type TaskStatus =
+  | 'open' | 'offered' | 'accepted'
+  | 'pending_confirmation' | 'employer_confirmed' | 'completed'
+
+export type Task = {
+  id: string | number
+  taskType?: string
+  description?: string
+  location?: string
+  duration?: string
+  pay?: number
+  status?: TaskStatus
+  employer?: string | { orgName?: string; name?: string }
+  acceptedBy?: string | number
+  createdAt?: string
+  reviews?: { rating?: number; comment?: string }[]
+  [k: string]: unknown
+}
+
 export type Employer = {
   id?: string | number
   orgName?: string
@@ -163,8 +184,8 @@ export const auth = {
 /* -------------------------------- workers ------------------------------ */
 
 export const workers = {
-  list: () => request<unknown>('/api/workers'),
-  me: (token = session.workerToken()) => request<unknown>('/api/workers/me', { token }),
+  list: () => request<{ workers: Worker[] }>('/api/workers'),
+  me: (token = session.workerToken()) => request<{ worker: Worker }>('/api/workers/me', { token }),
   updateMe: (patch: Record<string, unknown>, token = session.workerToken()) =>
     request<unknown>('/api/workers/me', { method: 'PATCH', body: patch, token }),
 }
@@ -172,10 +193,10 @@ export const workers = {
 /* --------------------------------- tasks ------------------------------- */
 
 export const tasks = {
-  open: () => request<unknown>('/api/tasks'),
-  mine: (token = session.workerToken()) => request<unknown>('/api/tasks/mine', { token }),
-  workerHistory: (token = session.workerToken()) => request<unknown>('/api/tasks/worker-history', { token }),
-  all: (token = session.employerToken()) => request<unknown>('/api/tasks/all', { token }),
+  open: () => request<{ tasks: Task[] }>('/api/tasks'),
+  mine: (token = session.workerToken()) => request<{ tasks: Task[] }>('/api/tasks/mine', { token }),
+  workerHistory: (token = session.workerToken()) => request<{ tasks: Task[] }>('/api/tasks/worker-history', { token }),
+  all: (token = session.employerToken()) => request<{ tasks: Task[] }>('/api/tasks/all', { token }),
 
   acceptOffer: (id: string | number, token = session.workerToken()) =>
     request<unknown>(`/api/tasks/${id}/accept-offer`, { method: 'PATCH', token }),
