@@ -184,7 +184,7 @@ export default function WorkerDashboard() {
         )}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Stat icon={<Star size={20} />} label="Your rating" value={me?.rating ? `${Number(me.rating).toFixed(1)}` : '—'} />
+          <Stat icon={<Star size={20} />} label="Your rating" value={me?.rating && Number(me.rating) > 0 ? `${Number(me.rating).toFixed(1)}` : '—'} />
           <Stat icon={<img src="/icons/tasks.png" alt="" className="h-5 w-5 object-contain" />} label="Tasks completed" value={`${completed}`} />
           <Stat icon={<img src="/icons/wallet.png" alt="" className="h-5 w-5 object-contain" />} label="Total earned" value={cedis(earned)} />
         </div>

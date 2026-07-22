@@ -42,8 +42,9 @@ export type Worker = {
   phone?: string
   skills?: string[]
   photoUrl?: string
-  rating?: number
+  rating?: number | string
   tasksCompleted?: number
+  dailyCharge?: string | number
   totalEarned?: number
   [k: string]: unknown
 }

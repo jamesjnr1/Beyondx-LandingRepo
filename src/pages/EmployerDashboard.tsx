@@ -6,10 +6,10 @@ import Toast, { type ToastMsg } from '../components/Toast'
 import { tasks as tasksApi, workers as workersApi, employers as employersApi, session, ApiError, type Task, type Worker, type Employer } from '../lib/api'
 
 const cedis = (n?: number) => `GH\u20b5 ${Number(n || 0).toLocaleString()}`
-const wName = (w: Worker) => (w.name as string) || (w.fullName as string) || 'Worker'
+const wName = (w: Worker) => (w.fullName as string) || (w.name as string) || 'Worker'
 const wInitials = (w: Worker) => wName(w).split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()
 const wSkills = (w: Worker): string[] => (Array.isArray(w.skills) ? (w.skills as string[]) : (w.cats as string[]) || [])
-const wCharge = (w: Worker): number => Number((w.charge as number) ?? (w.avgPay as number) ?? 0)
+const wCharge = (w: Worker): number => Number((w.dailyCharge as string) ?? (w.charge as number) ?? 0) || 0
 
 const STATUS: Record<string, { label: string; dot: string; chip: string; note?: string }> = {
   open: { label: 'Awaiting worker', dot: 'bg-clay-500', chip: 'bg-clay-400/15 text-clay-600', note: 'Waiting for a worker to accept.' },
@@ -161,7 +161,7 @@ export default function EmployerDashboard() {
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-serif text-base font-medium text-ink-900">{wName(w)}</span>
                         <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-700">
-                          {w.rating ? <span className="inline-flex items-center gap-0.5"><Star size={12} aria-hidden="true" className="fill-forest-600 text-forest-600" /> {Number(w.rating).toFixed(1)}</span> : <span>New worker</span>}
+                          {w.rating && Number(w.rating) > 0 ? <span className="inline-flex items-center gap-0.5"><Star size={12} aria-hidden="true" className="fill-forest-600 text-forest-600" /> {Number(w.rating).toFixed(1)}</span> : <span>New worker</span>}
                           {wSkills(w).length ? <span>· {wSkills(w).slice(0, 2).join(', ')}</span> : null}
                           {w.isBusy ? <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">On a job</span> : null}
                         </span>
@@ -250,12 +250,12 @@ function WorkerProfileModal({ worker, onClose, onDispatch }: { worker: Worker; o
             : <span aria-hidden="true" className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-cream-50 font-serif text-2xl font-bold text-forest-700 shadow-md">{wInitials(worker)}</span>}
           <h2 id="wp-title" className="mt-3 font-serif text-2xl font-medium text-cream-50">{wName(worker)}</h2>
           <div className="mt-2 flex items-center justify-center gap-2">
-            {worker.rating ? <span className="inline-flex items-center gap-1 rounded-full bg-cream-50/15 px-2.5 py-0.5 text-xs font-semibold text-cream-50"><Star size={12} aria-hidden="true" className="fill-cream-50 text-cream-50" /> {Number(worker.rating).toFixed(1)}</span> : null}
+            {worker.rating && Number(worker.rating) > 0 ? <span className="inline-flex items-center gap-1 rounded-full bg-cream-50/15 px-2.5 py-0.5 text-xs font-semibold text-cream-50"><Star size={12} aria-hidden="true" className="fill-cream-50 text-cream-50" /> {Number(worker.rating).toFixed(1)}</span> : null}
           </div>
           <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-cream-200/90"><ShieldCheck size={14} aria-hidden="true" /> BeyondX Verified · Certified Worker</p>
         </div>
         <div className="grid grid-cols-2 gap-3 border-b border-ink-900/10 p-6">
-          <div className="rounded-xl bg-cream-100 p-4 text-center"><span className="block font-serif text-2xl font-semibold text-ink-900">{Number(worker.tasks || 0)}</span><span className="text-xs text-ink-700">Tasks completed</span></div>
+          <div className="rounded-xl bg-cream-100 p-4 text-center"><span className="block font-serif text-2xl font-semibold text-ink-900">{Number(worker.tasksCompleted ?? worker.tasks ?? 0)}</span><span className="text-xs text-ink-700">Tasks completed</span></div>
           <div className="rounded-xl bg-cream-100 p-4 text-center"><span className="block font-serif text-2xl font-semibold text-ink-900">{cedis(wCharge(worker))}</span><span className="text-xs text-ink-700">Rate per day</span></div>
         </div>
         <div className="space-y-4 p-6">
