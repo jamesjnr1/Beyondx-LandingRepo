@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { session } from '../../lib/api'
 
 export type AuthView =
   | 'worker-login'
@@ -17,15 +18,30 @@ type AppCtx = {
   close: () => void
   page: Page
   go: (p: Page) => void
+  logout: () => void
 }
 
 const Ctx = createContext<AppCtx>({
-  view: null, open: () => {}, close: () => {}, page: 'home', go: () => {},
+  view: null, open: () => {}, close: () => {}, page: 'home', go: () => {}, logout: () => {},
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [view, setView] = useState<AuthView>(null)
   const [page, setPage] = useState<Page>('home')
+
+  // Keep people signed in across refreshes, using the same session the main site sets.
+  useEffect(() => {
+    if (session.workerToken()) setPage('worker-dashboard')
+    else if (session.employerToken()) setPage('employer-dashboard')
+  }, [])
+
+  const logout = () => {
+    if (page === 'worker-dashboard') session.logoutWorker()
+    if (page === 'employer-dashboard') session.logoutEmployer()
+    setView(null)
+    setPage('home')
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'auto' })
+  }
 
   const go = (p: Page) => {
     setView(null)
@@ -34,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <Ctx.Provider value={{ view, open: setView, close: () => setView(null), page, go }}>
+    <Ctx.Provider value={{ view, open: setView, close: () => setView(null), page, go, logout }}>
       {children}
     </Ctx.Provider>
   )

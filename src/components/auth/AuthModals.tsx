@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode, type FormEvent, type InputHTMLAttr
 import { X, ShieldCheck, HeartHandshake, ChevronLeft } from 'lucide-react'
 import Logo from '../Logo'
 import { useAuth, type AuthView } from './AuthContext'
+import { auth, session, ApiError } from '../../lib/api'
 
 const REGIONS = [
   'Greater Accra', 'Ashanti', 'Western', 'Central', 'Eastern',
@@ -21,6 +22,20 @@ const RELATIONSHIPS = [
   'Family Member', 'Friend', 'Former Employer',
   'Community/Religious Leader', 'Case Worker / Social Worker', 'Other',
 ]
+
+function FormError({ message }: { message: string | null }) {
+  if (!message) return null
+  return (
+    <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm leading-relaxed text-red-700">
+      {message}
+    </p>
+  )
+}
+
+function errText(e: unknown) {
+  if (e instanceof ApiError) return e.message
+  return 'Something went wrong. Please try again.'
+}
 
 function Modal({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   const { close } = useAuth()
@@ -68,8 +83,8 @@ function Select({ label, options, value, onChange }: { label: string; options: s
   )
 }
 
-function Submit({ children }: { children: ReactNode }) {
-  return <button type="submit" className="w-full rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 shadow-sm transition-all hover:bg-forest-500 active:scale-[0.98]">{children}</button>
+function Submit({ children, disabled }: { children: ReactNode; disabled?: boolean }) {
+  return <button type="submit" disabled={disabled} className="w-full rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 shadow-sm transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-70">{children}</button>
 }
 
 function SwitchLink({ prompt, action, to }: { prompt: string; action: string; to: AuthView }) {
@@ -103,12 +118,31 @@ function WorkerLogin() {
   const { go } = useAuth()
   const [phone, setPhone] = useState('')
   const [pin, setPin] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (busy) return
+    setErr(null); setBusy(true)
+    try {
+      const data = await auth.workerLogin(phone.trim(), pin.trim())
+      session.saveWorker(data.token, data.worker)
+      go('worker-dashboard')
+    } catch (e2) {
+      setErr(errText(e2))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <Modal title="Worker Login" subtitle="Access your BeyondX task dashboard">
-      <form onSubmit={(e: FormEvent) => { e.preventDefault(); go('worker-dashboard') }} className="space-y-4">
+      <form onSubmit={submit} className="space-y-4">
         <Field label="Phone Number" type="tel" placeholder="0XX XXX XXXX" value={phone} onChange={setPhone} />
         <Field label="PIN" type="password" inputMode="numeric" placeholder="••••" value={pin} onChange={setPin} />
-        <Submit>Sign In to My Dashboard</Submit>
+        <FormError message={err} />
+        <Submit disabled={busy}>{busy ? 'Signing in…' : 'Sign In to My Dashboard'}</Submit>
       </form>
       <Divider />
       <SwitchLink prompt="New to BeyondX?" action="Register as a Worker" to="worker-register" />
@@ -120,12 +154,31 @@ function EmployerLogin() {
   const { go } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (busy) return
+    setErr(null); setBusy(true)
+    try {
+      const data = await auth.employerLogin(email.trim(), password)
+      session.saveEmployer(data.token, data.employer)
+      go('employer-dashboard')
+    } catch (e2) {
+      setErr(errText(e2))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <Modal title="Employer Login" subtitle="Sign in to access the worker dispatch platform">
-      <form onSubmit={(e: FormEvent) => { e.preventDefault(); go('employer-dashboard') }} className="space-y-4">
+      <form onSubmit={submit} className="space-y-4">
         <Field label="Email Address" type="email" placeholder="you@company.com" value={email} onChange={setEmail} />
         <Field label="Password" type="password" placeholder="••••••••" value={password} onChange={setPassword} />
-        <Submit>Sign In</Submit>
+        <FormError message={err} />
+        <Submit disabled={busy}>{busy ? 'Signing in…' : 'Sign In'}</Submit>
       </form>
       <Divider />
       <SwitchLink prompt="Don't have an account?" action="Create Employer Account" to="employer-register" />
@@ -138,7 +191,26 @@ function EmployerRegister() {
   const [step, setStep] = useState(1)
   const [f, setF] = useState({ org: '', contact: '', phone: '', region: REGIONS[0], email: '', password: '' })
   const set = (k: keyof typeof f) => (v: string) => setF({ ...f, [k]: v })
-  const next = (e: FormEvent) => { e.preventDefault(); step < 2 ? setStep(step + 1) : open('employer-onboarding') }
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const next = async (e: FormEvent) => {
+    e.preventDefault()
+    if (step < 2) { setStep(step + 1); return }
+    if (busy) return
+    setErr(null); setBusy(true)
+    try {
+      const data = await auth.employerRegister({
+        email: f.email.trim(), password: f.password, orgName: f.org.trim(),
+        contactPerson: f.contact.trim(), phone: f.phone.trim(), region: f.region,
+      })
+      session.saveEmployer(data.token, data.employer)
+      open('employer-onboarding')
+    } catch (e2) {
+      setErr(errText(e2))
+    } finally {
+      setBusy(false)
+    }
+  }
   return (
     <Modal title="Create Employer Account" subtitle="Join BeyondX and start hiring verified workers">
       <Stepper step={step} total={2} />
@@ -153,14 +225,15 @@ function EmployerRegister() {
           <Field label="Email Address" type="email" value={f.email} onChange={set('email')} />
           <Field label="Password" type="password" value={f.password} onChange={set('password')} />
         </>)}
+        <FormError message={err} />
         <div className="mt-5 flex items-center gap-3">
           {step > 1 && (
             <button type="button" onClick={() => setStep(step - 1)} className="flex items-center gap-1 rounded-full border border-ink-900/15 px-4 py-3 text-sm font-medium text-ink-800 transition-colors hover:bg-ink-900/5">
               <ChevronLeft size={16} /> Back
             </button>
           )}
-          <button type="submit" className="flex-1 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 shadow-sm transition-all hover:bg-forest-500 active:scale-[0.98]">
-            {step < 2 ? 'Continue' : 'Create Account'}
+          <button type="submit" disabled={busy} className="flex-1 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 shadow-sm transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-70">
+            {busy ? 'Creating…' : step < 2 ? 'Continue' : 'Create Account'}
           </button>
         </div>
       </form>
@@ -176,7 +249,27 @@ function WorkerRegister() {
   const [skills, setSkills] = useState<string[]>([])
   const set = (k: keyof typeof f) => (v: string) => setF({ ...f, [k]: v })
   const toggleSkill = (s: string) => setSkills((c) => (c.includes(s) ? c.filter((x) => x !== s) : [...c, s]))
-  const next = (e: FormEvent) => { e.preventDefault(); step < 3 ? setStep(step + 1) : open('worker-onboarding') }
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const next = async (e: FormEvent) => {
+    e.preventDefault()
+    if (step < 3) { setStep(step + 1); return }
+    if (busy) return
+    setErr(null); setBusy(true)
+    try {
+      const data = await auth.workerRegister({
+        fullName: f.name.trim(), phone: f.phone.trim(), prisonFacility: f.facility,
+        skills, pin: f.pin.trim(), guarantorName: f.gName.trim(),
+        guarantorPhone: f.gPhone.trim(), guarantorRelationship: f.relationship,
+      })
+      session.saveWorker(data.token, data.worker)
+      open('worker-onboarding')
+    } catch (e2) {
+      setErr(errText(e2))
+    } finally {
+      setBusy(false)
+    }
+  }
   return (
     <Modal title="Register as a Worker" subtitle="Join BeyondX and start earning through verified work">
       <Stepper step={step} total={3} />
@@ -208,14 +301,15 @@ function WorkerRegister() {
           <Select label="Relationship to Guarantor" options={RELATIONSHIPS} value={f.relationship} onChange={set('relationship')} />
           <Field label="PIN (4 digits)" type="password" inputMode="numeric" maxLength={4} placeholder="••••" value={f.pin} onChange={set('pin')} />
         </>)}
+        <FormError message={err} />
         <div className="mt-5 flex items-center gap-3">
           {step > 1 && (
             <button type="button" onClick={() => setStep(step - 1)} className="flex items-center gap-1 rounded-full border border-ink-900/15 px-4 py-3 text-sm font-medium text-ink-800 transition-colors hover:bg-ink-900/5">
               <ChevronLeft size={16} /> Back
             </button>
           )}
-          <button type="submit" className="flex-1 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 shadow-sm transition-all hover:bg-forest-500 active:scale-[0.98]">
-            {step < 3 ? 'Continue' : 'Create My Account'}
+          <button type="submit" disabled={busy} className="flex-1 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 shadow-sm transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-70">
+            {busy ? 'Creating…' : step < 3 ? 'Continue' : 'Create My Account'}
           </button>
         </div>
       </form>

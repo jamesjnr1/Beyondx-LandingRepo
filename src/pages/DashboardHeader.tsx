@@ -11,7 +11,7 @@ export default function DashboardHeader({
   avatar?: string
   onEditProfile?: () => void
 }) {
-  const { go } = useAuth()
+  const { go, logout } = useAuth()
   return (
     <header className="sticky top-0 z-40 border-b border-ink-900/10 bg-cream-50/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-8">
@@ -36,7 +36,7 @@ export default function DashboardHeader({
               <span className="hidden sm:inline">{name ? name.split(' ')[0] : 'Profile'}</span>
             </button>
           )}
-          <button onClick={() => go('home')} aria-label="Log out and return home"
+          <button onClick={logout} aria-label="Log out and return home"
             className="flex items-center gap-1.5 rounded-full border border-ink-900/15 px-3 py-1.5 text-sm font-medium text-ink-800 transition-colors hover:bg-ink-900/5 active:scale-[0.98]">
             <LogOut size={15} aria-hidden="true" /> <span className="hidden sm:inline">Log Out</span>
           </button>
