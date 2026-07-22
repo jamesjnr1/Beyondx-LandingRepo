@@ -1,63 +1,26 @@
-import { useEffect, useState, type ReactNode } from 'react'
-import { ChevronLeft, ChevronRight, Star, Send, Phone, Briefcase, Plus, X, ShieldCheck, CircleCheck, Info } from 'lucide-react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { ChevronRight, Star, Send, Phone, Plus, X, ShieldCheck, CircleCheck, Info, RefreshCw, AlertCircle } from 'lucide-react'
 import DashboardHeader from './DashboardHeader'
-import ProfileModal, { type Profile } from '../components/ProfileModal'
+import ProfileModal from '../components/ProfileModal'
 import Toast, { type ToastMsg } from '../components/Toast'
-import { categories } from '../data'
+import { tasks as tasksApi, workers as workersApi, employers as employersApi, session, ApiError, type Task, type Worker, type Employer } from '../lib/api'
 
-type Worker = { id: number; name: string; initials: string; rating: number; jobs: number; phone: string; experience: string; skills: string[]; avgPay: number }
-type Status = 'awaiting-worker' | 'on-the-job' | 'confirmed' | 'released'
-type Dispatch = { id: number; worker: string; category: string; date: string; status: Status; rating?: number }
-type Posted = { id: number; title: string; category: string; location: string; date: string; pay: number }
+const cedis = (n?: number) => `GH\u20b5 ${Number(n || 0).toLocaleString()}`
+const wName = (w: Worker) => (w.name as string) || (w.fullName as string) || 'Worker'
+const wInitials = (w: Worker) => wName(w).split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()
+const wSkills = (w: Worker): string[] => (Array.isArray(w.skills) ? (w.skills as string[]) : (w.cats as string[]) || [])
+const wCharge = (w: Worker): number => Number((w.charge as number) ?? (w.avgPay as number) ?? 0)
 
-const WORKERS: Worker[] = [
-  { id: 1, name: 'Kofi Asante', initials: 'KA', rating: 5, jobs: 48, phone: '024 123 4567', experience: '6 years', skills: ['Logistics', 'Warehouse', 'Heavy lifting'], avgPay: 130 },
-  { id: 2, name: 'Yaw Boateng', initials: 'YB', rating: 4, jobs: 23, phone: '020 987 6543', experience: '3 years', skills: ['Painting', 'Tiling'], avgPay: 110 },
-  { id: 3, name: 'Ama Serwaa', initials: 'AS', rating: 5, jobs: 31, phone: '055 456 7890', experience: '4 years', skills: ['Cleaning', 'Facility care'], avgPay: 95 },
-  { id: 4, name: 'Kwesi Owusu', initials: 'KO', rating: 4, jobs: 9, phone: '026 321 0987', experience: '1 year', skills: ['General labour', 'Events'], avgPay: 85 },
-]
-const INITIAL_DISPATCH: Dispatch[] = [
-  { id: 100, worker: 'Kofi Asante', category: 'Logistics & Delivery', date: 'Yesterday', status: 'released', rating: 5 },
-  { id: 101, worker: 'Ama Serwaa', category: 'Agriculture & Environment', date: '3 days ago', status: 'on-the-job' },
-]
-
-const STATUS: Record<Status, { label: string; dot: string; chip: string; note?: string }> = {
-  'awaiting-worker': {
-    label: 'Awaiting worker response',
-    dot: 'bg-clay-500',
-    chip: 'bg-clay-400/15 text-clay-600',
-    note: 'The worker has been notified and will accept or decline shortly.',
-  },
-  'on-the-job': {
-    label: 'On the job',
-    dot: 'bg-forest-500',
-    chip: 'bg-forest-600/10 text-forest-700',
-    note: 'Attendance is GPS-verified. Confirm once the work is finished.',
-  },
-  confirmed: {
-    label: 'Confirmed — with BeyondX',
-    dot: 'bg-ink-700',
-    chip: 'bg-ink-900/10 text-ink-800',
-    note: 'You confirmed the work. BeyondX is processing the release to the worker.',
-  },
-  released: {
-    label: 'Payment released',
-    dot: 'bg-forest-600',
-    chip: 'bg-forest-600/15 text-forest-800',
-    note: 'BeyondX released the payment to the worker.',
-  },
+const STATUS: Record<string, { label: string; dot: string; chip: string; note?: string }> = {
+  open: { label: 'Awaiting worker', dot: 'bg-clay-500', chip: 'bg-clay-400/15 text-clay-600', note: 'Waiting for a worker to accept.' },
+  offered: { label: 'Awaiting worker response', dot: 'bg-clay-500', chip: 'bg-clay-400/15 text-clay-600', note: 'The worker will accept or decline shortly.' },
+  accepted: { label: 'On the job', dot: 'bg-forest-500', chip: 'bg-forest-600/10 text-forest-700', note: 'Attendance is GPS-verified. Confirm once the work is finished.' },
+  pending_confirmation: { label: 'Worker marked done', dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-700', note: 'Confirm the work to release payment through BeyondX.' },
+  employer_confirmed: { label: 'Confirmed — with BeyondX', dot: 'bg-ink-700', chip: 'bg-ink-900/10 text-ink-800', note: 'BeyondX is processing the payment release to the worker.' },
+  completed: { label: 'Payment released', dot: 'bg-forest-600', chip: 'bg-forest-600/15 text-forest-800', note: 'BeyondX released the payment to the worker.' },
 }
-const EMPLOYER_PROFILE: Profile = { name: 'Accra Build Co.', contact: 'Ama Mensah', phone: '024 000 0000', region: 'Greater Accra', bio: '' }
+const st = (s?: string) => STATUS[s || 'open'] || STATUS.open
 
-const cedis = (n: number) => `GH\u20b5 ${n.toLocaleString()}`
-
-function useEsc(onClose: () => void) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
-}
 function Stars({ n }: { n: number }) {
   return <span className="inline-flex" role="img" aria-label={`${n} out of 5 stars`}>{[1, 2, 3, 4, 5].map((i) => <Star key={i} size={14} aria-hidden="true" className={i <= n ? 'fill-forest-600 text-forest-600' : 'text-ink-900/20'} />)}</span>
 }
@@ -84,392 +47,394 @@ function Stat({ icon, label, value }: { icon: ReactNode; label: string; value: s
     </div>
   )
 }
-function Field({ label, id, ...p }: { label: string; id: string } & React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <div>
-      <label htmlFor={id} className="mb-1 block text-xs font-medium text-ink-700">{label}</label>
-      <input id={id} {...p} className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
-    </div>
-  )
+function useEsc(onClose: () => void) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+}
+function Empty({ text }: { text: string }) {
+  return <div className="rounded-xl border border-dashed border-ink-900/15 p-10 text-center text-sm text-ink-700">{text}</div>
+}
+function Skeleton() {
+  return <div className="space-y-3" aria-hidden="true">{[0, 1, 2].map((i) => (
+    <div key={i} className="rounded-xl bg-cream-50 p-5 shadow-sm ring-1 ring-ink-900/5">
+      <div className="h-4 w-1/3 animate-pulse rounded bg-ink-900/10" />
+      <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-ink-900/5" />
+    </div>))}</div>
 }
 
 export default function EmployerDashboard() {
   const [tab, setTab] = useState<'hire' | 'post' | 'history'>('hire')
-  const [category, setCategory] = useState<string | null>(null)
-  const [dispatches, setDispatches] = useState<Dispatch[]>(INITIAL_DISPATCH)
-  const [rating, setRating] = useState<Dispatch | null>(null)
-  const [paying, setPaying] = useState<Worker | null>(null)
   const [viewing, setViewing] = useState<Worker | null>(null)
-  const [posted, setPosted] = useState<Posted[]>([])
-  const [profile, setProfile] = useState<Profile>(EMPLOYER_PROFILE)
+  const [dispatching, setDispatching] = useState<Worker | null>(null)
+  const [rating, setRating] = useState<Task | null>(null)
   const [editing, setEditing] = useState(false)
+
+  const [workerList, setWorkerList] = useState<Worker[]>([])
+  const [taskList, setTaskList] = useState<Task[]>([])
+  const [profile, setProfile] = useState<Employer | null>(session.employer())
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [announce, setAnnounce] = useState('')
   const [toast, setToast] = useState<ToastMsg>(null)
 
-  const confirmDispatch = (w: Worker) => {
-    setDispatches((d) => [{ id: Date.now(), worker: w.name, category: category!, date: 'Just now', status: 'awaiting-worker' }, ...d])
-    setPaying(null)
-    setAnnounce(`Payment received. ${w.name} has been dispatched and will accept or decline shortly.`)
-    setToast({ id: Date.now(), kind: 'success', title: `${w.name} dispatched`, detail: `Payment is held safely by BeyondX. ${w.name.split(' ')[0]} will accept or decline shortly — track it under Dispatch History.` })
+  const load = useCallback(async () => {
+    setError(null)
+    try {
+      const [wRes, tRes, pRes] = await Promise.all([
+        workersApi.list(),
+        tasksApi.all(),
+        employersApi.profile().catch(() => null),
+      ])
+      setWorkerList(wRes?.workers || [])
+      setTaskList(tRes?.tasks || [])
+      const emp = (pRes as { employer?: Employer } | null)?.employer
+      if (emp) { setProfile(emp); session.patchEmployer(emp) }
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not load your dashboard.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const orgName = (profile?.orgName as string) || 'Your organisation'
+  const logo = (profile?.logoUrl as string) || undefined
+  const active = taskList.filter((t) => t.status && !['completed', 'employer_confirmed'].includes(t.status))
+
+  const afterDispatch = () => {
+    setDispatching(null)
+    setAnnounce('Worker dispatched.')
+    setToast({ id: Date.now(), kind: 'success', title: 'Worker dispatched', detail: 'Payment is held by BeyondX. The worker will accept or decline shortly — track it under Dispatch History.' })
+    load()
   }
-  const completeAndRate = (stars: number) => {
-    if (!rating) return
-    setDispatches((d) => d.map((x) => (x.id === rating.id ? { ...x, status: 'confirmed', rating: stars } : x)))
-    setAnnounce(`Work confirmed for ${rating.worker}. BeyondX is processing the payment release.`)
-    setToast({ id: Date.now(), kind: 'success', title: 'Work confirmed', detail: `Thanks — BeyondX is now processing payment to ${rating.worker}. You'll see "Payment released" here once it's done.` })
+  const afterConfirm = (worker: string) => {
     setRating(null)
-  }
-  const addTask = (t: Posted) => {
-    setPosted((p) => [t, ...p])
-    setAnnounce('Task posted. Workers can now see it.')
-    setToast({ id: Date.now(), kind: 'success', title: 'Task posted', detail: `"${t.title}" is now visible to verified workers in ${t.location}.` })
+    setAnnounce(`Work confirmed for ${worker}.`)
+    setToast({ id: Date.now(), kind: 'success', title: 'Work confirmed', detail: `BeyondX is now processing payment to ${worker}. It shows "Payment released" once done.` })
+    load()
   }
 
   return (
     <div className="min-h-screen bg-cream-100">
-      <DashboardHeader role="EMPLOYER" title="Employer Dashboard" name={profile.name} avatar={profile.avatar} onEditProfile={() => setEditing(true)} />
+      <DashboardHeader role="EMPLOYER" title="Employer Dashboard" name={orgName} avatar={logo} onEditProfile={() => setEditing(true)} />
       <main id="main" className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-8">
         <p aria-live="polite" className="sr-only">{announce}</p>
 
+        {error && (
+          <div className="mb-4 flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="flex items-start gap-2 text-sm text-red-700"><AlertCircle size={16} aria-hidden="true" className="mt-0.5 shrink-0" /> {error}</p>
+            <button onClick={() => { setLoading(true); load() }} className="shrink-0 rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-cream-50 hover:bg-red-700">Try again</button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Stat icon={<img src="/icons/dispatches.png" alt="" className="h-5 w-5 object-contain" />} label="Active dispatches" value={`${dispatches.filter((d) => d.status !== 'released').length}`} />
-          <Stat icon={<img src="/icons/workers.png" alt="" className="h-6 w-6 object-contain" />} label="Workers available" value={`${WORKERS.length}`} />
-          <Stat icon={<img src="/icons/dispatched.png" alt="" className="h-5 w-5 object-contain" />} label="Total dispatched" value={`${dispatches.length}`} />
+          <Stat icon={<img src="/icons/dispatches.png" alt="" className="h-5 w-5 object-contain" />} label="Active dispatches" value={`${active.length}`} />
+          <Stat icon={<img src="/icons/workers.png" alt="" className="h-6 w-6 object-contain" />} label="Workers available" value={`${workerList.length}`} />
+          <Stat icon={<img src="/icons/dispatched.png" alt="" className="h-5 w-5 object-contain" />} label="Total dispatched" value={`${taskList.length}`} />
         </div>
 
-        <div className="mt-8 flex gap-2 overflow-x-auto border-b border-ink-900/10 pb-px" role="tablist" aria-label="Employer sections">
-          {([['hire', 'Hire Workers'], ['post', 'Post a Task'], ['history', `Dispatch History (${dispatches.length})`]] as const).map(([id, label]) => (
+        <div className="mt-8 flex items-center gap-2 overflow-x-auto border-b border-ink-900/10 pb-px" role="tablist" aria-label="Employer sections">
+          {([['hire', 'Hire Workers'], ['post', 'Post a Task'], ['history', `Dispatch History (${taskList.length})`]] as const).map(([id, label]) => (
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
               className={`shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40 ${tab === id ? 'border-forest-600 text-forest-700' : 'border-transparent text-ink-700 hover:text-ink-900'}`}>
               {label}
             </button>
           ))}
+          <button onClick={() => { setLoading(true); load() }} aria-label="Refresh" className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-ink-900/15 px-3 py-1.5 text-xs font-medium text-ink-700 hover:bg-ink-900/5">
+            <RefreshCw size={13} aria-hidden="true" /> Refresh
+          </button>
         </div>
 
-        {/* HIRE: clean category list */}
-        {tab === 'hire' && !category && (
+        {tab === 'hire' && (
           <div className="mt-6">
-            <h2 className="mb-4 font-serif text-xl font-medium text-ink-900">Select a task category</h2>
-            <ul className="divide-y divide-ink-900/10 overflow-hidden rounded-2xl bg-cream-50 shadow-sm ring-1 ring-ink-900/5">
-              {categories.map((c) => (
-                <li key={c.title}>
-                  <button onClick={() => setCategory(c.title)}
-                    className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-forest-600/5 focus:outline-none focus-visible:bg-forest-600/5 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest-600/40">
-                    <span>
-                      <span className="block font-serif text-base font-medium text-ink-900">{c.title}</span>
-                      {c.description && <span className="mt-0.5 block text-sm text-ink-700">{c.description}</span>}
-                    </span>
-                    <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-ink-700" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* HIRE: worker detail cards */}
-        {tab === 'hire' && category && (
-          <div className="mt-6">
-            <button onClick={() => setCategory(null)} className="mb-4 flex items-center gap-1 text-sm font-medium text-forest-700 hover:text-forest-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
-              <ChevronLeft size={16} aria-hidden="true" /> Back to categories
-            </button>
-            <h2 className="mb-1 font-serif text-xl font-medium text-ink-900">Available workers</h2>
-            <p className="mb-4 text-sm text-ink-700">Verified workers for <span className="font-medium text-ink-900">{category}</span></p>
-            <ul className="divide-y divide-ink-900/10 overflow-hidden rounded-2xl bg-cream-50 shadow-sm ring-1 ring-ink-900/5">
-              {WORKERS.map((w) => (
-                <li key={w.id}>
-                  <button
-                    onClick={() => setViewing(w)}
-                    aria-label={`View ${w.name}'s profile`}
-                    className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-forest-600/5 focus:outline-none focus-visible:bg-forest-600/5 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest-600/40 sm:px-5"
-                  >
-                    <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-forest-600 text-sm font-bold text-cream-50">{w.initials}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-serif text-base font-medium text-ink-900">{w.name}</span>
-                      <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-700">
-                        <span className="inline-flex items-center gap-0.5"><Star size={12} aria-hidden="true" className="fill-forest-600 text-forest-600" /> {w.rating}.0</span>
-                        <span>· {w.jobs} tasks done</span>
+            {loading ? <Skeleton /> : workerList.length ? (
+              <ul className="divide-y divide-ink-900/10 overflow-hidden rounded-2xl bg-cream-50 shadow-sm ring-1 ring-ink-900/5">
+                {workerList.map((w) => (
+                  <li key={String(w.id)}>
+                    <button onClick={() => setViewing(w)} aria-label={`View ${wName(w)}'s profile`}
+                      className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-forest-600/5 focus:outline-none focus-visible:bg-forest-600/5 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest-600/40 sm:px-5">
+                      {w.photoUrl ? <img src={w.photoUrl as string} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
+                        : <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-forest-600 text-sm font-bold text-cream-50">{wInitials(w)}</span>}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-serif text-base font-medium text-ink-900">{wName(w)}</span>
+                        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-700">
+                          {w.rating ? <span className="inline-flex items-center gap-0.5"><Star size={12} aria-hidden="true" className="fill-forest-600 text-forest-600" /> {Number(w.rating).toFixed(1)}</span> : <span>New worker</span>}
+                          {wSkills(w).length ? <span>· {wSkills(w).slice(0, 2).join(', ')}</span> : null}
+                          {w.isBusy ? <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">On a job</span> : null}
+                        </span>
                       </span>
-                    </span>
-                    <span className="hidden shrink-0 text-sm font-medium text-forest-700 sm:inline">View profile</span>
-                    <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-ink-700" />
-                  </button>
-                </li>
-              ))}
-            </ul>
+                      <span className="hidden shrink-0 text-sm font-medium text-forest-700 sm:inline">View profile</span>
+                      <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-ink-700" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : <Empty text="No workers available yet." />}
           </div>
         )}
 
-        {/* POST A TASK */}
-        {tab === 'post' && <PostTask onAdd={addTask} posted={posted} />}
+        {tab === 'post' && <PostTask onDone={(msg) => { setToast({ id: Date.now(), kind: 'success', title: 'Task posted', detail: msg }); load() }} />}
 
-        {/* HISTORY */}
         {tab === 'history' && (
           <div className="mt-6 space-y-3">
-            {dispatches.map((d) => (
-              <div key={d.id} className="rounded-xl bg-cream-50 p-4 shadow-sm ring-1 ring-ink-900/5 sm:p-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="font-serif text-base font-medium text-ink-900">{d.worker}</p>
-                    <p className="mt-0.5 text-sm text-ink-700">{d.category} · {d.date}</p>
-                    {d.rating && (
-                      <div className="mt-1 flex items-center gap-2 text-xs text-ink-700">You rated <Stars n={d.rating} /></div>
-                    )}
+            {loading ? <Skeleton /> : taskList.length ? taskList.map((t) => {
+              const s = st(t.status)
+              const worker = typeof t.employer === 'string' ? t.employer : ''
+              const rev = t.reviews?.[0]?.rating
+              return (
+                <div key={String(t.id)} className="rounded-xl bg-cream-50 p-4 shadow-sm ring-1 ring-ink-900/5 sm:p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="font-serif text-base font-medium text-ink-900">{t.taskType || 'Task'}</p>
+                      <p className="mt-0.5 truncate text-sm text-ink-700">{t.description || worker}{t.location ? ` · ${t.location}` : ''}</p>
+                      {rev ? <div className="mt-1 flex items-center gap-2 text-xs text-ink-700">You rated <Stars n={Number(rev)} /></div> : null}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${s.chip}`}>
+                        <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${s.dot}`} /> {s.label}
+                      </span>
+                      {t.status === 'pending_confirmation' && (
+                        <button onClick={() => setRating(t)} className="shrink-0 rounded-full bg-forest-600 px-4 py-2 text-xs font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
+                          Confirm work &amp; rate
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${STATUS[d.status].chip}`}>
-                      <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${STATUS[d.status].dot}`} />
-                      {STATUS[d.status].label}
-                    </span>
-                    {(d.status === 'awaiting-worker' || d.status === 'on-the-job') && (
-                      <button onClick={() => setRating(d)}
-                        className="shrink-0 rounded-full bg-forest-600 px-4 py-2 text-xs font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
-                        Confirm work done &amp; rate
-                      </button>
-                    )}
-                  </div>
+                  {s.note && <p className="mt-3 flex items-start gap-2 border-t border-ink-900/10 pt-3 text-xs leading-relaxed text-ink-700"><Info size={13} aria-hidden="true" className="mt-0.5 shrink-0 text-clay-500" /> {s.note}</p>}
                 </div>
-                {STATUS[d.status].note && (
-                  <p className="mt-3 flex items-start gap-2 border-t border-ink-900/10 pt-3 text-xs leading-relaxed text-ink-700">
-                    <Info size={13} aria-hidden="true" className="mt-0.5 shrink-0 text-clay-500" />
-                    {STATUS[d.status].note}
-                  </p>
-                )}
-              </div>
-            ))}
+              )
+            }) : <Empty text="No dispatches yet. Hire a worker to get started." />}
           </div>
         )}
       </main>
 
       <Toast toast={toast} onClose={() => setToast(null)} />
 
-      {viewing && (
-        <WorkerProfileModal
-          worker={viewing}
-          onClose={() => setViewing(null)}
-          onDispatch={() => { const w = viewing; setViewing(null); setPaying(w) }}
+      {viewing && <WorkerProfileModal worker={viewing} onClose={() => setViewing(null)} onDispatch={() => { const w = viewing; setViewing(null); setDispatching(w) }} />}
+      {dispatching && <DispatchModal worker={dispatching} onClose={() => setDispatching(null)} onDone={afterDispatch} onError={(m) => setToast({ id: Date.now(), kind: 'info', title: 'Dispatch failed', detail: m })} />}
+      {rating && <RateModal task={rating} onClose={() => setRating(null)} onDone={afterConfirm} onError={(m) => setToast({ id: Date.now(), kind: 'info', title: 'Could not confirm', detail: m })} />}
+      {editing && profile !== undefined && (
+        <ProfileModal
+          role="EMPLOYER"
+          initial={{ avatar: logo, name: orgName, contact: (profile?.contactPerson as string) || '', phone: (profile?.phone as string) || '', region: (profile?.region as string) || '', bio: '' }}
+          onClose={() => setEditing(false)}
+          onSave={async (p) => {
+            setEditing(false)
+            try {
+              await employersApi.updateProfile({ contactPerson: p.contact, phone: p.phone, region: p.region })
+              session.patchEmployer({ contactPerson: p.contact, phone: p.phone, region: p.region })
+              setToast({ id: Date.now(), kind: 'success', title: 'Profile updated', detail: 'Your organisation details are up to date.' })
+              load()
+            } catch (e) {
+              setToast({ id: Date.now(), kind: 'info', title: 'Could not save profile', detail: e instanceof ApiError ? e.message : 'Please try again.' })
+            }
+          }}
         />
       )}
-      {paying && <PaymentModal worker={paying} category={category!} onClose={() => setPaying(null)} onPaid={() => confirmDispatch(paying)} />}
-      {rating && <RateModal worker={rating.worker} onClose={() => setRating(null)} onSubmit={completeAndRate} />}
-      {editing && <ProfileModal role="EMPLOYER" initial={profile} onClose={() => setEditing(false)} onSave={(p) => { setProfile(p); setEditing(false); setAnnounce('Profile updated.'); setToast({ id: Date.now(), kind: 'success', title: 'Profile updated', detail: 'Your organisation details are now up to date.' }) }} />}
     </div>
   )
 }
 
 function WorkerProfileModal({ worker, onClose, onDispatch }: { worker: Worker; onClose: () => void; onDispatch: () => void }) {
   useEsc(onClose)
+  const skills = wSkills(worker)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/50 p-4" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="wp-title"
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-cream-50 shadow-xl" onClick={(e) => e.stopPropagation()}>
-
-        {/* Header */}
+      <div role="dialog" aria-modal="true" aria-labelledby="wp-title" className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-cream-50 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="relative rounded-t-2xl bg-forest-700 px-6 pb-6 pt-6 text-center">
-          <button onClick={onClose} aria-label="Close profile"
-            className="absolute right-4 top-4 rounded-lg p-1 text-cream-50/80 transition-colors hover:bg-cream-50/10 hover:text-cream-50">
-            <X size={18} aria-hidden="true" />
-          </button>
-          <span aria-hidden="true" className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-cream-50 font-serif text-2xl font-bold text-forest-700 shadow-md">
-            {worker.initials}
-          </span>
-          <h2 id="wp-title" className="mt-3 font-serif text-2xl font-medium text-cream-50">{worker.name}</h2>
+          <button onClick={onClose} aria-label="Close profile" className="absolute right-4 top-4 rounded-lg p-1 text-cream-50/80 transition-colors hover:bg-cream-50/10 hover:text-cream-50"><X size={18} aria-hidden="true" /></button>
+          {worker.photoUrl ? <img src={worker.photoUrl as string} alt="" className="mx-auto h-20 w-20 rounded-full object-cover ring-2 ring-cream-50/30" />
+            : <span aria-hidden="true" className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-cream-50 font-serif text-2xl font-bold text-forest-700 shadow-md">{wInitials(worker)}</span>}
+          <h2 id="wp-title" className="mt-3 font-serif text-2xl font-medium text-cream-50">{wName(worker)}</h2>
           <div className="mt-2 flex items-center justify-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-cream-50/15 px-2.5 py-0.5 text-xs font-semibold text-cream-50">
-              <Star size={12} aria-hidden="true" className="fill-cream-50 text-cream-50" /> {worker.rating}.0
-            </span>
+            {worker.rating ? <span className="inline-flex items-center gap-1 rounded-full bg-cream-50/15 px-2.5 py-0.5 text-xs font-semibold text-cream-50"><Star size={12} aria-hidden="true" className="fill-cream-50 text-cream-50" /> {Number(worker.rating).toFixed(1)}</span> : null}
           </div>
-          <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-cream-200/90">
-            <ShieldCheck size={14} aria-hidden="true" /> BeyondX Verified · Certified Worker
-          </p>
+          <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-cream-200/90"><ShieldCheck size={14} aria-hidden="true" /> BeyondX Verified · Certified Worker</p>
         </div>
-
-        {/* Record */}
         <div className="grid grid-cols-2 gap-3 border-b border-ink-900/10 p-6">
-          <div className="rounded-xl bg-cream-100 p-4 text-center">
-            <span className="block font-serif text-2xl font-semibold text-ink-900">{worker.jobs}</span>
-            <span className="text-xs text-ink-700">Tasks completed</span>
-          </div>
-          <div className="rounded-xl bg-cream-100 p-4 text-center">
-            <span className="block font-serif text-2xl font-semibold text-ink-900">{cedis(worker.avgPay)}</span>
-            <span className="text-xs text-ink-700">Average pay / task</span>
-          </div>
+          <div className="rounded-xl bg-cream-100 p-4 text-center"><span className="block font-serif text-2xl font-semibold text-ink-900">{Number(worker.tasks || 0)}</span><span className="text-xs text-ink-700">Tasks completed</span></div>
+          <div className="rounded-xl bg-cream-100 p-4 text-center"><span className="block font-serif text-2xl font-semibold text-ink-900">{cedis(wCharge(worker))}</span><span className="text-xs text-ink-700">Rate per day</span></div>
         </div>
-
-        {/* Details */}
         <div className="space-y-4 p-6">
-          <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-clay-500">Contact &amp; Experience</h3>
-            <dl className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <Phone size={15} aria-hidden="true" className="shrink-0 text-forest-600" />
-                <dt className="sr-only">Phone number</dt>
-                <dd className="text-ink-900">{worker.phone}</dd>
-              </div>
-              <div className="flex items-center gap-2">
-                <Briefcase size={15} aria-hidden="true" className="shrink-0 text-forest-600" />
-                <dt className="sr-only">Experience</dt>
-                <dd className="text-ink-900">{worker.experience} of experience</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-clay-500">Certified Skills</h3>
-            <ul className="overflow-hidden rounded-xl ring-1 ring-ink-900/10">
-              {worker.skills.map((s, i) => (
-                <li key={s} className={`flex items-center gap-3 px-4 py-3 ${i % 2 ? 'bg-cream-100/60' : 'bg-cream-50'}`}>
-                  <CircleCheck size={16} aria-hidden="true" className="shrink-0 text-forest-600" />
-                  <span className="flex-1 text-sm font-medium text-ink-900">{s}</span>
-                  <span className="shrink-0 rounded-full bg-forest-600/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-forest-700">
-                    Certified
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* Action */}
-        <div className="border-t border-ink-900/10 p-6">
-          <button onClick={onDispatch} aria-label={`Dispatch ${worker.name}`}
-            className="flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
-            <Send size={15} aria-hidden="true" /> Dispatch {worker.name.split(' ')[0]}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function PostTask({ onAdd, posted }: { onAdd: (t: Posted) => void; posted: Posted[] }) {
-  const [title, setTitle] = useState('')
-  const [cat, setCat] = useState(categories[0].title)
-  const [loc, setLoc] = useState('')
-  const [date, setDate] = useState('')
-  const [pay, setPay] = useState('')
-  const [ok, setOk] = useState(false)
-  const submit = () => {
-    if (!title || !loc) return
-    onAdd({ id: Date.now(), title, category: cat, location: loc, date: date || 'Flexible', pay: Number(pay) || 0 })
-    setTitle(''); setLoc(''); setDate(''); setPay('')
-    setOk(true); setTimeout(() => setOk(false), 2500)
-  }
-  return (
-    <div className="mt-6 grid gap-6 lg:grid-cols-2">
-      <div className="rounded-2xl bg-cream-50 p-6 shadow-sm ring-1 ring-ink-900/5">
-        <h2 className="mb-4 font-serif text-xl font-medium text-ink-900">Post a new task</h2>
-        <div className="space-y-3">
-          <Field id="pt-title" label="Task title" placeholder="e.g. Warehouse stock sorting" value={title} onChange={(e) => setTitle(e.target.value)} />
-          <div>
-            <label htmlFor="pt-cat" className="mb-1 block text-xs font-medium text-ink-700">Category</label>
-            <select id="pt-cat" value={cat} onChange={(e) => setCat(e.target.value)} className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30">
-              {categories.map((c) => <option key={c.title}>{c.title}</option>)}
-            </select>
-          </div>
-          <Field id="pt-loc" label="Location" placeholder="e.g. Tema" value={loc} onChange={(e) => setLoc(e.target.value)} />
-          <div className="grid grid-cols-2 gap-3">
-            <Field id="pt-date" label="Date / time" placeholder="e.g. Mon · 8:00 AM" value={date} onChange={(e) => setDate(e.target.value)} />
-            <Field id="pt-pay" label="Pay (GH₵)" type="number" placeholder="120" value={pay} onChange={(e) => setPay(e.target.value)} />
-          </div>
-          <button onClick={submit} className="flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
-            <Plus size={16} aria-hidden="true" /> Post task
-          </button>
-          {ok && <p role="status" className="text-center text-sm font-medium text-forest-700">Task posted — workers can now see it.</p>}
-        </div>
-      </div>
-      <div>
-        <h2 className="mb-4 font-serif text-xl font-medium text-ink-900">Your posted tasks</h2>
-        <div className="space-y-3">
-          {posted.length ? posted.map((t) => (
-            <div key={t.id} className="rounded-xl bg-cream-50 p-4 shadow-sm ring-1 ring-ink-900/5">
-              <span className="mb-1 inline-block rounded-full bg-forest-600/10 px-2.5 py-0.5 text-xs font-medium text-forest-700">{t.category}</span>
-              <h3 className="font-serif text-lg font-medium text-ink-900">{t.title}</h3>
-              <p className="mt-0.5 text-sm text-ink-700">{t.location} · {t.date} · <span className="font-semibold text-ink-900">{cedis(t.pay)}</span></p>
+          {worker.phone ? <div><h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-clay-500">Contact</h3><div className="flex items-center gap-2 text-sm text-ink-900"><Phone size={15} aria-hidden="true" className="text-forest-600" /> {worker.phone as string}</div></div> : null}
+          {skills.length ? (
+            <div>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-clay-500">Certified Skills</h3>
+              <ul className="overflow-hidden rounded-xl ring-1 ring-ink-900/10">
+                {skills.map((s, i) => (
+                  <li key={s} className={`flex items-center gap-3 px-4 py-3 ${i % 2 ? 'bg-cream-100/60' : 'bg-cream-50'}`}>
+                    <CircleCheck size={16} aria-hidden="true" className="shrink-0 text-forest-600" />
+                    <span className="flex-1 text-sm font-medium text-ink-900">{s}</span>
+                    <span className="shrink-0 rounded-full bg-forest-600/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-forest-700">Certified</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          )) : <div className="rounded-xl border border-dashed border-ink-900/15 p-10 text-center text-sm text-ink-700">No posted tasks yet. Create one on the left.</div>}
+          ) : null}
+        </div>
+        <div className="border-t border-ink-900/10 p-6">
+          <button onClick={onDispatch} disabled={!!worker.isBusy} aria-label={`Dispatch ${wName(worker)}`}
+            className="flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
+            <Send size={15} aria-hidden="true" /> {worker.isBusy ? 'Currently on a job' : `Dispatch ${wName(worker).split(' ')[0]}`}
+          </button>
         </div>
       </div>
     </div>
   )
 }
 
-function PaymentModal({ worker, category, onClose, onPaid }: { worker: Worker; category: string; onClose: () => void; onPaid: () => void }) {
+function DispatchModal({ worker, onClose, onDone, onError }: { worker: Worker; onClose: () => void; onDone: () => void; onError: (m: string) => void }) {
   useEsc(onClose)
-  const [provider, setProvider] = useState('MTN MoMo')
-  const [number, setNumber] = useState('')
-  const [processing, setProcessing] = useState(false)
-  const pay = () => { setProcessing(true); setTimeout(onPaid, 900) }
+  const [days, setDays] = useState(1)
+  const [location, setLocation] = useState('')
+  const [taskType, setTaskType] = useState(wSkills(worker)[0] || 'General Task')
+  const [payRef, setPayRef] = useState('')
+  const [busy, setBusy] = useState(false)
+  const pay = wCharge(worker) * days
+  const duration = days === 0.5 ? 'Half Day' : days === 1 ? '1 Day' : `${days} Days`
+
+  const submit = async () => {
+    if (!payRef.trim() || busy) return
+    setBusy(true)
+    try {
+      await tasksApi.dispatch({ worker, taskType, location, duration, pay, paymentRef: payRef.trim() })
+      onDone()
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : 'Please try again.')
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/50 p-4" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="pay-title" className="w-full max-w-md rounded-2xl bg-cream-50 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="dp-title" className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-cream-50 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-1 flex items-center justify-between">
-          <h2 id="pay-title" className="font-serif text-xl font-medium text-ink-900">Confirm &amp; pay</h2>
-          <button onClick={onClose} aria-label="Cancel payment" className="rounded-lg p-1 text-ink-700 hover:bg-ink-900/5"><X size={18} aria-hidden="true" /></button>
+          <h2 id="dp-title" className="font-serif text-xl font-medium text-ink-900">Dispatch {wName(worker).split(' ')[0]}</h2>
+          <button onClick={onClose} aria-label="Cancel dispatch" className="rounded-lg p-1 text-ink-700 hover:bg-ink-900/5"><X size={18} aria-hidden="true" /></button>
         </div>
-        <p className="mb-4 text-sm text-ink-700">Your payment is held securely by BeyondX. We release it to <span className="font-medium text-ink-900">{worker.name}</span> once you confirm the work is done.</p>
-
-        <div className="mb-4 rounded-xl bg-forest-600/5 p-4 ring-1 ring-forest-600/15">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-ink-700">Worker</span><span className="font-medium text-ink-900">{worker.name}</span>
-          </div>
-          <div className="mt-1 flex items-center justify-between text-sm">
-            <span className="text-ink-700">Category</span><span className="font-medium text-ink-900">{category}</span>
-          </div>
-          <div className="mt-2 flex items-center justify-between border-t border-forest-600/15 pt-2">
-            <span className="text-sm text-ink-700">Amount</span><span className="font-serif text-lg font-semibold text-ink-900">{cedis(worker.avgPay)}</span>
-          </div>
-          <div className="mt-2 space-y-1 border-t border-forest-600/15 pt-2 text-xs text-ink-700">
-            <div className="flex items-center justify-between">
-              <span>To worker (85%)</span><span className="font-medium text-ink-900">{cedis(Math.round(worker.avgPay * 0.85))}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Platform commission (15%)</span><span className="font-medium text-ink-900">{cedis(Math.round(worker.avgPay * 0.15))}</span>
-            </div>
-          </div>
-        </div>
+        <p className="mb-4 text-sm text-ink-700">Pay {wName(worker)} via mobile money, then enter your payment reference below. BeyondX holds the payment and releases it once you confirm the work.</p>
 
         <div className="space-y-3">
-          <div>
-            <label htmlFor="pay-provider" className="mb-1 block text-xs font-medium text-ink-700">Mobile money provider</label>
-            <select id="pay-provider" value={provider} onChange={(e) => setProvider(e.target.value)} className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30">
-              <option>MTN MoMo</option><option>Telecel Cash</option><option>AirtelTigo Money</option>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-ink-700">Task type</span>
+            <input value={taskType} onChange={(e) => setTaskType(e.target.value)} className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-ink-700">Location</span>
+            <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Tema" className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-ink-700">Duration</span>
+            <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30">
+              <option value={0.5}>Half Day</option><option value={1}>1 Day</option><option value={2}>2 Days</option><option value={3}>3 Days</option><option value={5}>5 Days</option>
             </select>
-          </div>
-          <div>
-            <label htmlFor="pay-number" className="mb-1 block text-xs font-medium text-ink-700">Mobile money number</label>
-            <input id="pay-number" type="tel" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="0244 000 000" className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
-          </div>
+          </label>
         </div>
 
-        <button onClick={pay} disabled={processing} className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
-          <ShieldCheck size={16} aria-hidden="true" /> {processing ? 'Processing…' : `Pay ${cedis(worker.avgPay)} & dispatch`}
+        <div className="mt-4 flex items-center justify-between rounded-xl bg-forest-600/5 p-4 ring-1 ring-forest-600/15">
+          <span className="text-sm text-ink-700">Amount to pay</span>
+          <span className="font-serif text-lg font-semibold text-ink-900">{cedis(pay)}</span>
+        </div>
+
+        <label className="mt-4 block">
+          <span className="mb-1 block text-xs font-medium text-ink-700">Payment reference / transaction ID</span>
+          <input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder="e.g. 1234567890" className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
+        </label>
+
+        <button onClick={submit} disabled={!payRef.trim() || busy} className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
+          <ShieldCheck size={16} aria-hidden="true" /> {busy ? 'Dispatching…' : 'Confirm & dispatch'}
         </button>
-        <p className="mt-2 text-center text-xs text-ink-700">The worker will accept or decline after you pay.</p>
+        <p className="mt-2 text-center text-xs text-ink-700">The worker is notified once your payment reference is recorded.</p>
       </div>
     </div>
   )
 }
 
-function RateModal({ worker, onClose, onSubmit }: { worker: string; onClose: () => void; onSubmit: (stars: number) => void }) {
+function RateModal({ task, onClose, onDone, onError }: { task: Task; onClose: () => void; onDone: (worker: string) => void; onError: (m: string) => void }) {
   useEsc(onClose)
   const [stars, setStars] = useState(5)
   const [comment, setComment] = useState('')
+  const [busy, setBusy] = useState(false)
+  const worker = typeof task.employer === 'string' ? task.employer : task.taskType || 'the worker'
+
+  const submit = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      await tasksApi.complete(task.id)
+      await tasksApi.review(task.id, stars, comment).catch(() => null)
+      onDone(worker)
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : 'Please try again.')
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/50 p-4" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="rate-title" className="w-full max-w-md rounded-2xl bg-cream-50 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="rt-title" className="w-full max-w-md rounded-2xl bg-cream-50 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-1 flex items-center justify-between">
-          <h2 id="rate-title" className="font-serif text-xl font-medium text-ink-900">Confirm work &amp; rate</h2>
-          <button onClick={onClose} aria-label="Close rating" className="rounded-lg p-1 text-ink-700 hover:bg-ink-900/5"><X size={18} aria-hidden="true" /></button>
+          <h2 id="rt-title" className="font-serif text-xl font-medium text-ink-900">Confirm work &amp; rate</h2>
+          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-ink-700 hover:bg-ink-900/5"><X size={18} aria-hidden="true" /></button>
         </div>
-        <p className="mb-4 text-sm text-ink-700">Confirm the work is done and rate <span className="font-medium text-ink-900">{worker}</span>. Once you confirm, BeyondX reviews and releases the payment we are holding to the worker.</p>
+        <p className="mb-4 text-sm text-ink-700">Confirm the work is done and rate it. Once you confirm, BeyondX reviews and releases the payment we are holding to the worker.</p>
         <StarPicker value={stars} onChange={setStars} />
-        <label htmlFor="rate-comment" className="sr-only">Feedback</label>
-        <textarea id="rate-comment" value={comment} onChange={(e) => setComment(e.target.value)} rows={3} placeholder="Feedback on the work (optional)"
-          className="mt-4 w-full rounded-xl border border-ink-900/15 bg-white p-3 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
-        <button onClick={() => onSubmit(stars)} className="mt-4 w-full rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
-          Confirm work is done
+        <label htmlFor="rt-comment" className="sr-only">Feedback</label>
+        <textarea id="rt-comment" value={comment} onChange={(e) => setComment(e.target.value)} rows={3} placeholder="Feedback on the work (optional)" className="mt-4 w-full rounded-xl border border-ink-900/15 bg-white p-3 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
+        <button onClick={submit} disabled={busy} className="mt-4 w-full rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
+          {busy ? 'Confirming…' : 'Confirm work is done'}
         </button>
+      </div>
+    </div>
+  )
+}
+
+function PostTask({ onDone }: { onDone: (msg: string) => void }) {
+  const [taskType, setTaskType] = useState('')
+  const [description, setDescription] = useState('')
+  const [location, setLocation] = useState('')
+  const [duration, setDuration] = useState('1 Day')
+  const [pay, setPay] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const submit = async () => {
+    if (!taskType || !location || busy) return
+    setErr(null); setBusy(true)
+    try {
+      await tasksApi.create({ taskType, description, location, duration, pay: parseFloat(pay) || 0 })
+      setTaskType(''); setDescription(''); setLocation(''); setPay('')
+      onDone(`"${taskType}" is now open for workers to accept.`)
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Please try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const inp = 'w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30'
+  return (
+    <div className="mt-6 max-w-xl">
+      <div className="rounded-2xl bg-cream-50 p-6 shadow-sm ring-1 ring-ink-900/5">
+        <h2 className="mb-4 font-serif text-xl font-medium text-ink-900">Post a new task</h2>
+        <div className="space-y-3">
+          <label className="block"><span className="mb-1 block text-xs font-medium text-ink-700">Task type</span><input value={taskType} onChange={(e) => setTaskType(e.target.value)} placeholder="e.g. Facility & Cleaning" className={inp} /></label>
+          <label className="block"><span className="mb-1 block text-xs font-medium text-ink-700">Description</span><input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What needs doing" className={inp} /></label>
+          <label className="block"><span className="mb-1 block text-xs font-medium text-ink-700">Location</span><input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Tema" className={inp} /></label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block"><span className="mb-1 block text-xs font-medium text-ink-700">Duration</span>
+              <select value={duration} onChange={(e) => setDuration(e.target.value)} className={inp}><option>Half Day</option><option>1 Day</option><option>2 Days</option><option>3 Days</option><option>5 Days</option></select>
+            </label>
+            <label className="block"><span className="mb-1 block text-xs font-medium text-ink-700">Pay (GH₵)</span><input type="number" value={pay} onChange={(e) => setPay(e.target.value)} placeholder="120" className={inp} /></label>
+          </div>
+          {err && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{err}</p>}
+          <button onClick={submit} disabled={busy} className="flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
+            <Plus size={16} aria-hidden="true" /> {busy ? 'Posting…' : 'Post task'}
+          </button>
+        </div>
       </div>
     </div>
   )

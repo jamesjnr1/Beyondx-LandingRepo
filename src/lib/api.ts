@@ -208,9 +208,34 @@ export const tasks = {
     request<unknown>(`/api/tasks/${id}/worker-done`, { method: 'PATCH', token }),
 
   create: (
-    payload: { taskType: string; description: string; location: string; duration: string; pay: number },
+    payload: {
+      taskType: string
+      description: string
+      location: string
+      duration: string
+      pay: number
+      workerId?: string | number
+    },
     token = session.employerToken(),
-  ) => request<unknown>('/api/tasks', { method: 'POST', body: payload, token }),
+  ) => request<{ task?: Task }>('/api/tasks', { method: 'POST', body: payload, token }),
+
+  // Dispatch a specific worker: a task carrying the payment reference,
+  // matching the exact shape beyondxco.com posts.
+  dispatch: (
+    args: { worker: Worker; taskType: string; location: string; duration: string; pay: number; paymentRef: string },
+    token = session.employerToken(),
+  ) => request<{ task?: Task }>('/api/tasks', {
+    method: 'POST',
+    token,
+    body: {
+      taskType: args.taskType,
+      description: `Worker: ${args.worker.name || args.worker.fullName} (${args.worker.workerId}) | Payment Ref: ${args.paymentRef}`,
+      location: args.location || 'To be confirmed',
+      duration: args.duration,
+      pay: args.pay,
+      workerId: args.worker.id,
+    },
+  }),
 
   complete: (id: string | number, token = session.employerToken()) =>
     request<unknown>(`/api/tasks/${id}/complete`, { method: 'PATCH', token }),
@@ -221,8 +246,23 @@ export const tasks = {
 
 /* ------------------------------- employers ----------------------------- */
 
+export const media = {
+  upload: (imageBase64: string, fileName: string, folder: string) =>
+    fetch('/api/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64, fileName, folder }),
+    }).then(async (r) => {
+      const t = await r.text()
+      let d: unknown = null
+      try { d = t ? JSON.parse(t) : null } catch { /* non-JSON */ }
+      if (!r.ok) throw new ApiError((d as { error?: string })?.error || 'Upload failed', r.status)
+      return d as { url: string }
+    }),
+}
+
 export const employers = {
-  profile: (token = session.employerToken()) => request<unknown>('/api/auth/employer-profile', { token }),
+  profile: (token = session.employerToken()) => request<{ employer: Employer }>('/api/auth/employer-profile', { token }),
   updateProfile: (patch: Record<string, unknown>, token = session.employerToken()) =>
     request<unknown>('/api/auth/employer-profile', { method: 'PATCH', body: patch, token }),
   reviews: (token = session.employerToken()) => request<unknown>('/api/auth/employer-reviews', { token }),
