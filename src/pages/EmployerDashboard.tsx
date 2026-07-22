@@ -16,8 +16,8 @@ const WORKERS: Worker[] = [
   { id: 4, name: 'Kwesi Owusu', initials: 'KO', rank: 'Bronze', rating: 4, jobs: 9, phone: '026 321 0987', experience: '1 year', skills: ['General labour', 'Events'], avgPay: 85 },
 ]
 const INITIAL_DISPATCH: Dispatch[] = [
-  { id: 100, worker: 'Kofi Asante', category: 'Logistics & Moving', date: 'Yesterday', status: 'Completed', rating: 5 },
-  { id: 101, worker: 'Ama Serwaa', category: 'Landscaping & Cleaning', date: '3 days ago', status: 'In progress' },
+  { id: 100, worker: 'Kofi Asante', category: 'Logistics & Delivery', date: 'Yesterday', status: 'Completed', rating: 5 },
+  { id: 101, worker: 'Ama Serwaa', category: 'Agriculture & Environment', date: '3 days ago', status: 'In progress' },
 ]
 const EMPLOYER_PROFILE: Profile = { name: 'Accra Build Co.', contact: 'Ama Mensah', phone: '024 000 0000', region: 'Greater Accra', bio: '' }
 
@@ -296,6 +296,14 @@ function PaymentModal({ worker, category, onClose, onPaid }: { worker: Worker; c
           </div>
           <div className="mt-2 flex items-center justify-between border-t border-forest-600/15 pt-2">
             <span className="text-sm text-ink-700">Amount</span><span className="font-serif text-lg font-semibold text-ink-900">{cedis(worker.avgPay)}</span>
+          </div>
+          <div className="mt-2 space-y-1 border-t border-forest-600/15 pt-2 text-xs text-ink-700">
+            <div className="flex items-center justify-between">
+              <span>To worker (85%)</span><span className="font-medium text-ink-900">{cedis(Math.round(worker.avgPay * 0.85))}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Platform commission (15%)</span><span className="font-medium text-ink-900">{cedis(Math.round(worker.avgPay * 0.15))}</span>
+            </div>
           </div>
         </div>
 

@@ -3,9 +3,9 @@ import { useReveal } from '../hooks/useReveal'
 
 const blocks = [
   {
-    eyebrow: 'Over BeyondX',
-    title: 'Service at the highest level, for those who deserve a second chance.',
-    body: 'BeyondX is a structured second-chance employment programme. We place vetted, skill-matched workers — people rebuilding their lives after release — into verified short-term roles with responsible employers across Greater Accra.',
+    eyebrow: 'About the Programme',
+    title: 'Work that restores dignity. Hire that builds trust.',
+    body: 'BeyondX is a structured second-chance employment programme. It places vetted, skill-matched workers who are rebuilding their lives after release into verified short-term roles with responsible employers across Greater Accra.',
     image: '/about.jpg',
     alt: 'Certified workers in safety harnesses on a construction site in Greater Accra',
   },
@@ -71,6 +71,22 @@ export default function About() {
             </motion.div>
           </div>
         ))}
+
+        <motion.figure
+          initial={{ opacity: 0, y: 24 }}
+          animate={visible ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.7 }}
+          className="mx-auto max-w-3xl rounded-2xl border border-ink-900/8 bg-cream-100 p-8 text-center sm:p-12"
+        >
+          <span aria-hidden="true" className="font-serif text-5xl leading-none text-clay-400/50">&ldquo;</span>
+          <blockquote className="mt-2 font-serif text-xl font-medium leading-relaxed text-ink-900 text-pretty sm:text-2xl">
+            Before BeyondX, I had skills but no platform. Now I have a work record,
+            a wage, and employers who call me back.
+          </blockquote>
+          <figcaption className="mt-5 text-sm font-semibold uppercase tracking-wider text-clay-500">
+            — Kofi A., BX-00142 · Facility Cleaning Specialist
+          </figcaption>
+        </motion.figure>
       </div>
     </section>
   )

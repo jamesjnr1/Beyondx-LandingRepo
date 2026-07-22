@@ -3,11 +3,13 @@ import Stats from '../components/Stats'
 import About from '../components/About'
 import HowItWorks from '../components/HowItWorks'
 import WorkerCategories from '../components/WorkerCategories'
+import PlatformDesign from '../components/PlatformDesign'
 import Pillars from '../components/Pillars'
 import Transparency from '../components/Transparency'
 import Testimonial from '../components/Testimonial'
 import News from '../components/News'
 import SocialGrid from '../components/SocialGrid'
+import Sponsors from '../components/Sponsors'
 import CTA from '../components/CTA'
 
 export default function Home() {
@@ -18,8 +20,10 @@ export default function Home() {
       <About />
       <HowItWorks />
       <WorkerCategories />
+      <PlatformDesign />
       <Pillars />
       <Transparency />
+      <Sponsors />
       <Testimonial />
       <News />
       <div className="bg-cream-100">

@@ -3,17 +3,17 @@ import { useReveal } from '../hooks/useReveal'
 import { CircleCheck as CheckCircle } from 'lucide-react'
 
 const employerPoints = [
-  'Post short-term tasks or dispatch a specific worker directly',
-  'GPS-verified attendance logs for every shift',
-  'Secure mobile money payments handled through the platform',
-  'Dedicated coordinator support at every step',
+  'Candidates have served their sentences in full and are legally recognised as having fulfilled their debt to society',
+  'You are hiring a vetted, work-ready individual assessed as fit for employment',
+  'Hiring through this platform may qualify your business for government tax incentives',
+  'All job completions are tracked and recorded through the platform',
 ]
 
 const workerPoints = [
-  'Skills certification and a digital work record — yours to keep',
-  'Fair, transparent pricing with 85% paid directly to you',
-  'Every employer agrees to treat you with dignity',
-  'Build a verified reputation that opens doors',
+  'You have completed your sentence — this platform helps you write the next chapter through honest work and fair pay',
+  'Your criminal history will be disclosed transparently, but your conduct and work record will speak louder over time',
+  'You have the right to fair pay, respectful treatment, and to report any employer who treats you unfairly',
+  'More completed jobs means a stronger profile and access to better opportunities',
 ]
 
 export default function Transparency() {
@@ -24,12 +24,15 @@ export default function Transparency() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <span className="mb-4 inline-block text-sm font-semibold uppercase tracking-widest text-clay-500">
-            Transparency on both sides
+            Our Commitments
           </span>
           <h2 className="font-serif text-3xl font-medium leading-tight text-ink-900 text-balance sm:text-4xl lg:text-5xl">
-            Clear commitments to every{' '}
-            <span className="italic gradient-text">employer and worker</span>
+            Transparency on{' '}
+            <span className="italic gradient-text">both sides.</span>
           </h2>
+          <p className="mt-4 text-lg text-ink-700 text-pretty">
+            BeyondX makes clear commitments to every employer and every worker on this platform.
+          </p>
         </div>
 
         <div className="mt-16 grid gap-6 lg:grid-cols-2">
@@ -40,8 +43,11 @@ export default function Transparency() {
             className="rounded-2xl border border-ink-900/8 bg-cream-50 p-8 shadow-sm"
           >
             <h3 className="mb-6 font-serif text-xl font-semibold text-ink-900">
-              For employers
+              For Employers
             </h3>
+            <p className="-mt-4 mb-5 text-sm font-medium text-ink-700">
+              Important Notice Regarding Our Talent Pool
+            </p>
             <ul className="space-y-4">
               {employerPoints.map((point, i) => (
                 <motion.li
@@ -65,8 +71,11 @@ export default function Transparency() {
             className="rounded-2xl border border-ink-900/8 bg-cream-50 p-8 shadow-sm"
           >
             <h3 className="mb-6 font-serif text-xl font-semibold text-ink-900">
-              For workers
+              For Workers
             </h3>
+            <p className="-mt-4 mb-5 text-sm font-medium text-ink-700">
+              Welcome. You Belong Here.
+            </p>
             <ul className="space-y-4">
               {workerPoints.map((point, i) => (
                 <motion.li

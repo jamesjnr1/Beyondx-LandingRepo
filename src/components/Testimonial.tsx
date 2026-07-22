@@ -18,7 +18,10 @@ export default function Testimonial() {
           transition={{ duration: 0.7 }}
           className="text-center"
         >
-          <Quote size={40} className="mx-auto mb-6 text-clay-400/50" />
+          <span className="mb-4 inline-block text-sm font-semibold uppercase tracking-widest text-clay-500">
+            A Message From Our CEO
+          </span>
+          <Quote size={40} aria-hidden="true" className="mx-auto mb-6 text-clay-400/50" />
 
           <blockquote className="font-serif text-2xl font-medium leading-relaxed text-ink-900 text-pretty sm:text-3xl lg:text-4xl">
             "BeyondX exists because a record should mark where someone has been,

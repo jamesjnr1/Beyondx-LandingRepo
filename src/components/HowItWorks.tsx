@@ -14,16 +14,12 @@ export default function HowItWorks() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <span className="mb-4 inline-block text-sm font-semibold uppercase tracking-widest text-clay-500">
-            The process
+            How It Works
           </span>
           <h2 className="font-serif text-3xl font-medium leading-tight text-ink-900 text-balance sm:text-4xl lg:text-5xl">
-            From task to payment in{' '}
-            <span className="italic gradient-text">four steps</span>
+            Four simple{' '}
+            <span className="italic gradient-text">steps.</span>
           </h2>
-          <p className="mt-4 text-lg text-ink-700 text-pretty">
-            No paperwork, no middlemen. Just a clear path from posting a job to
-            settling payment through mobile money.
-          </p>
         </div>
 
         <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -45,6 +41,9 @@ export default function HowItWorks() {
                 <p className="text-sm leading-relaxed text-ink-700/80">
                   {step.description}
                 </p>
+                <span className="mt-4 inline-block rounded-full bg-forest-600/10 px-2.5 py-1 text-xs font-semibold text-forest-700">
+                  {step.tag}
+                </span>
               </div>
               {i < steps.length - 1 && (
                 <div className="absolute -right-3 top-1/2 hidden h-px w-6 bg-clay-400/40 lg:block" />

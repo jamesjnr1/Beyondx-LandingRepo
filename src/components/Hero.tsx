@@ -31,16 +31,17 @@ export default function Hero() {
             className="max-w-2xl"
           >
             <p className="mb-4 text-sm font-medium uppercase tracking-[0.2em] text-cream-200/80">
-              Reintegration · Greater Accra
+              Reintegration Programme
             </p>
             <h1 className="font-serif text-5xl font-medium leading-[1.05] text-cream-50 text-balance sm:text-6xl lg:text-7xl">
               Go Beyond.{' '}
               <span className="italic gradient-text">Hire Purpose.</span>
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-cream-200/90 text-pretty">
-              Verified, skill-matched workers rebuilding their lives after
-              release — connected with employers across Greater Accra.
-              GPS-verified attendance. Secure mobile money payments.
+              Workers are fully vetted and selected based on their skills — not
+              hired out of charity. They bring the exact capabilities required to
+              complete your tasks effectively, while also offering a cost-efficient
+              solution.
             </p>
           </motion.div>
 

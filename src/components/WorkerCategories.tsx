@@ -10,15 +10,15 @@ export default function WorkerCategories() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <span className="mb-4 inline-block text-sm font-semibold uppercase tracking-widest text-clay-500">
-            What our workers do
+            Available Task Categories
           </span>
           <h2 className="font-serif text-3xl font-medium leading-tight text-ink-900 text-balance sm:text-4xl lg:text-5xl">
-            Seven certified{' '}
-            <span className="italic gradient-text">skill categories</span>
+            What our{' '}
+            <span className="italic gradient-text">workers do.</span>
           </h2>
           <p className="mt-4 text-lg text-ink-700 text-pretty">
-            Workers are certified across these categories and matched to
-            employer needs throughout Greater Accra.
+            Workers are certified across seven categories and matched to
+            employer needs across Greater Accra.
           </p>
         </div>
 
@@ -47,9 +47,14 @@ export default function WorkerCategories() {
                   <h3 className="font-serif text-xl font-semibold text-cream-50">
                     {cat.title}
                   </h3>
-                  <p className="mt-1 text-sm leading-relaxed text-cream-200/80 text-pretty">
-                    {cat.description}
-                  </p>
+                  <ul className="mt-2 space-y-0.5">
+                    {cat.tasks.map((t) => (
+                      <li key={t} className="flex items-start gap-1.5 text-sm leading-snug text-cream-200/85">
+                        <span aria-hidden="true" className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-forest-400" />
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </motion.div>
             )

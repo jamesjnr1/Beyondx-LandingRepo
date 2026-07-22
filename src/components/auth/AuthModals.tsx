@@ -172,7 +172,7 @@ function EmployerRegister() {
 function WorkerRegister() {
   const { open } = useAuth()
   const [step, setStep] = useState(1)
-  const [f, setF] = useState({ name: '', phone: '', ghanaCard: '', facility: FACILITIES[0], gName: '', gPhone: '', relationship: RELATIONSHIPS[0], pin: '' })
+  const [f, setF] = useState({ name: '', phone: '', facility: FACILITIES[0], gName: '', gPhone: '', relationship: RELATIONSHIPS[0], pin: '' })
   const [skills, setSkills] = useState<string[]>([])
   const set = (k: keyof typeof f) => (v: string) => setF({ ...f, [k]: v })
   const toggleSkill = (s: string) => setSkills((c) => (c.includes(s) ? c.filter((x) => x !== s) : [...c, s]))
@@ -184,7 +184,6 @@ function WorkerRegister() {
         {step === 1 && (<>
           <Field label="Full Name" value={f.name} onChange={set('name')} />
           <Field label="Phone Number" type="tel" value={f.phone} onChange={set('phone')} />
-          <Field label="Ghana Card Number" placeholder="GHA-XXXXXXXXX-X" maxLength={15} value={f.ghanaCard} onChange={set('ghanaCard')} />
           <Select label="Prison Facility (optional)" options={FACILITIES} value={f.facility} onChange={set('facility')} />
         </>)}
         {step === 2 && (
