@@ -1,4 +1,6 @@
 import { AuthProvider, useAuth } from './components/auth/AuthContext'
+import { AccessibilityProvider } from './components/a11y/AccessibilityContext'
+import AccessibilityMenu from './components/a11y/AccessibilityMenu'
 import AuthModals from './components/auth/AuthModals'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
@@ -11,8 +13,8 @@ import EmployerDashboard from './pages/EmployerDashboard'
 function Shell() {
   const { page } = useAuth()
 
-  if (page === 'worker-dashboard') return <WorkerDashboard />
-  if (page === 'employer-dashboard') return <EmployerDashboard />
+  if (page === 'worker-dashboard') return <><WorkerDashboard /><AccessibilityMenu /></>
+  if (page === 'employer-dashboard') return <><EmployerDashboard /><AccessibilityMenu /></>
 
   return (
     <div className="relative min-h-screen bg-cream-50 text-ink-900">
@@ -27,14 +29,17 @@ function Shell() {
       </main>
       <Footer />
       <AuthModals />
+      <AccessibilityMenu />
     </div>
   )
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Shell />
-    </AuthProvider>
+    <AccessibilityProvider>
+      <AuthProvider>
+        <Shell />
+      </AuthProvider>
+    </AccessibilityProvider>
   )
 }

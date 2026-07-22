@@ -56,3 +56,65 @@
 ::-webkit-scrollbar-track { background: #f2f5ee; }
 ::-webkit-scrollbar-thumb { background: #d2dac6; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #6bab21; }
+
+/* ---------- Accessibility preferences (set via the accessibility menu) ---------- */
+
+/* Text size: scales the whole rem-based layout */
+html.a11y-text-large { font-size: 118%; }
+html.a11y-text-xlarge { font-size: 134%; }
+
+/* Easier-to-read font: plainer typeface with looser spacing */
+html.a11y-dyslexia body,
+html.a11y-dyslexia .font-serif {
+  font-family: Verdana, Tahoma, 'Trebuchet MS', sans-serif;
+  letter-spacing: 0.02em;
+  word-spacing: 0.08em;
+  line-height: 1.75;
+}
+html.a11y-dyslexia .italic { font-style: normal; }
+
+/* Underline links */
+html.a11y-underline a { text-decoration: underline; text-underline-offset: 3px; }
+
+/* Reduce motion (user-selected, mirrors the OS-level preference) */
+html.a11y-reduce-motion *,
+html.a11y-reduce-motion *::before,
+html.a11y-reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* High contrast: darken body text, strengthen borders, remove low-opacity washes */
+html.a11y-contrast body { background: #ffffff; color: #000000; }
+html.a11y-contrast .text-ink-700,
+html.a11y-contrast .text-ink-700\/80,
+html.a11y-contrast .text-ink-800,
+html.a11y-contrast .text-ink-900 { color: #000000 !important; }
+html.a11y-contrast .text-cream-200\/80,
+html.a11y-contrast .text-cream-200\/90,
+html.a11y-contrast .text-cream-200\/70,
+html.a11y-contrast .text-cream-50 { color: #ffffff !important; }
+html.a11y-contrast .bg-cream-50,
+html.a11y-contrast .bg-cream-100,
+html.a11y-contrast .bg-cream-200 { background-color: #ffffff !important; }
+html.a11y-contrast .text-forest-700,
+html.a11y-contrast .text-forest-600 { color: #2f5c00 !important; }
+html.a11y-contrast .bg-forest-600,
+html.a11y-contrast .bg-forest-700 { background-color: #2f5c00 !important; }
+html.a11y-contrast .gradient-text {
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #2f5c00 !important;
+}
+html.a11y-contrast .ring-ink-900\/5,
+html.a11y-contrast .border-ink-900\/8,
+html.a11y-contrast .border-ink-900\/10,
+html.a11y-contrast .border-ink-900\/15 {
+  border-color: #000000 !important;
+  --tw-ring-color: #000000 !important;
+}
+html.a11y-contrast :focus-visible { outline: 3px solid #000000; outline-offset: 2px; }
