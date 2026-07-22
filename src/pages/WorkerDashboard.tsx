@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { MapPin, Calendar, Check, X, Star, RotateCcw, MessageSquare } from 'lucide-react'
+import { MapPin, Calendar, Check, X, Star, RotateCcw, MessageSquare, Info } from 'lucide-react'
 import DashboardHeader from './DashboardHeader'
 import ReferralCard from '../components/ReferralCard'
 import ProfileModal, { type Profile } from '../components/ProfileModal'
+import Toast, { type ToastMsg } from '../components/Toast'
 
 type Task = { id: number; title: string; category: string; location: string; pay: number; date: string; employer: string }
 type Review = { stars: number; comment: string }
@@ -66,19 +67,30 @@ export default function WorkerDashboard() {
   const [profile, setProfile] = useState<Profile>(WORKER_PROFILE)
   const [editing, setEditing] = useState(false)
   const [announce, setAnnounce] = useState('')
+  const [toast, setToast] = useState<ToastMsg>(null)
 
-  const accept = (t: Task) => { setAvailable((a) => a.filter((x) => x.id !== t.id)); setMine((m) => [t, ...m]); setAnnounce(`Accepted ${t.title}.`) }
-  const decline = (t: Task) => { setAvailable((a) => a.filter((x) => x.id !== t.id)); setDeclined((d) => [t, ...d]); setAnnounce(`Declined ${t.title}.`) }
+  const accept = (t: Task) => {
+    setAvailable((a) => a.filter((x) => x.id !== t.id)); setMine((m) => [t, ...m])
+    setAnnounce(`Accepted ${t.title}.`)
+    setToast({ id: Date.now(), kind: 'success', title: 'Task accepted', detail: `${t.title} moved to My Tasks. Check in with GPS when you arrive at ${t.location}.` })
+  }
+  const decline = (t: Task) => {
+    setAvailable((a) => a.filter((x) => x.id !== t.id)); setDeclined((d) => [t, ...d])
+    setAnnounce(`Declined ${t.title}.`)
+    setToast({ id: Date.now(), kind: 'info', title: 'Task declined', detail: 'It has moved to your Declined tab — you can move it back any time before someone else takes it.' })
+  }
   const reconsider = (t: Task) => { setDeclined((d) => d.filter((x) => x.id !== t.id)); setAvailable((a) => [t, ...a]) }
   const complete = (t: Task) => {
     setMine((m) => m.filter((x) => x.id !== t.id))
     setHistory((h) => [{ ...t, rating: 5, date: 'Just now' }, ...h])
-    setAnnounce(`Marked ${t.title} complete.`)
+    setAnnounce(`Marked ${t.title} complete. Awaiting employer confirmation.`)
+    setToast({ id: Date.now(), kind: 'success', title: 'Marked complete', detail: `${t.employer} will confirm the work, then BeyondX releases your payment.` })
   }
   const saveReview = (stars: number, comment: string) => {
     if (!reviewing) return
     setHistory((h) => h.map((x) => (x.id === reviewing.id ? { ...x, myReview: { stars, comment } } : x)))
     setAnnounce(`Review submitted for ${reviewing.employer}.`)
+    setToast({ id: Date.now(), kind: 'success', title: 'Review submitted', detail: `Thanks — your feedback on ${reviewing.employer} has been recorded.` })
     setReviewing(null)
   }
 
@@ -136,6 +148,12 @@ export default function WorkerDashboard() {
             </div>
           )) : <Empty text="No available tasks right now. Check back soon." />)}
 
+          {tab === 'mine' && mine.length > 0 && (
+            <p className="flex items-start gap-2 rounded-xl bg-forest-600/5 p-3 text-xs leading-relaxed text-ink-700 ring-1 ring-forest-600/15">
+              <Info size={13} aria-hidden="true" className="mt-0.5 shrink-0 text-forest-600" />
+              Mark a task complete when you finish. Your employer confirms the work, then BeyondX releases your payment.
+            </p>
+          )}
           {tab === 'mine' && (mine.length ? mine.map((t) => (
             <div key={t.id} className="flex flex-col gap-4 rounded-xl bg-cream-50 p-4 shadow-sm ring-1 ring-ink-900/5 sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <div>
@@ -203,8 +221,10 @@ export default function WorkerDashboard() {
         </div>
       </main>
 
+      <Toast toast={toast} onClose={() => setToast(null)} />
+
       {reviewing && <ReviewModal employer={reviewing.employer} onClose={() => setReviewing(null)} onSave={saveReview} StarPicker={StarPicker} />}
-      {editing && <ProfileModal role="WORKER" initial={profile} onClose={() => setEditing(false)} onSave={(p) => { setProfile(p); setEditing(false); setAnnounce('Profile updated.') }} />}
+      {editing && <ProfileModal role="WORKER" initial={profile} onClose={() => setEditing(false)} onSave={(p) => { setProfile(p); setEditing(false); setAnnounce('Profile updated.'); setToast({ id: Date.now(), kind: 'success', title: 'Profile updated', detail: 'Employers will now see your latest details.' }) }} />}
     </div>
   )
 }

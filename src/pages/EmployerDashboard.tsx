@@ -1,11 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { ChevronLeft, ChevronRight, Star, Send, Phone, Briefcase, Plus, X, ShieldCheck, CircleCheck } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Star, Send, Phone, Briefcase, Plus, X, ShieldCheck, CircleCheck, Info } from 'lucide-react'
 import DashboardHeader from './DashboardHeader'
 import ProfileModal, { type Profile } from '../components/ProfileModal'
+import Toast, { type ToastMsg } from '../components/Toast'
 import { categories } from '../data'
 
 type Worker = { id: number; name: string; initials: string; rating: number; jobs: number; phone: string; experience: string; skills: string[]; avgPay: number }
-type Status = 'Awaiting worker' | 'In progress' | 'Completed'
+type Status = 'awaiting-worker' | 'on-the-job' | 'confirmed' | 'released'
 type Dispatch = { id: number; worker: string; category: string; date: string; status: Status; rating?: number }
 type Posted = { id: number; title: string; category: string; location: string; date: string; pay: number }
 
@@ -16,9 +17,36 @@ const WORKERS: Worker[] = [
   { id: 4, name: 'Kwesi Owusu', initials: 'KO', rating: 4, jobs: 9, phone: '026 321 0987', experience: '1 year', skills: ['General labour', 'Events'], avgPay: 85 },
 ]
 const INITIAL_DISPATCH: Dispatch[] = [
-  { id: 100, worker: 'Kofi Asante', category: 'Logistics & Delivery', date: 'Yesterday', status: 'Completed', rating: 5 },
-  { id: 101, worker: 'Ama Serwaa', category: 'Agriculture & Environment', date: '3 days ago', status: 'In progress' },
+  { id: 100, worker: 'Kofi Asante', category: 'Logistics & Delivery', date: 'Yesterday', status: 'released', rating: 5 },
+  { id: 101, worker: 'Ama Serwaa', category: 'Agriculture & Environment', date: '3 days ago', status: 'on-the-job' },
 ]
+
+const STATUS: Record<Status, { label: string; dot: string; chip: string; note?: string }> = {
+  'awaiting-worker': {
+    label: 'Awaiting worker response',
+    dot: 'bg-clay-500',
+    chip: 'bg-clay-400/15 text-clay-600',
+    note: 'The worker has been notified and will accept or decline shortly.',
+  },
+  'on-the-job': {
+    label: 'On the job',
+    dot: 'bg-forest-500',
+    chip: 'bg-forest-600/10 text-forest-700',
+    note: 'Attendance is GPS-verified. Confirm once the work is finished.',
+  },
+  confirmed: {
+    label: 'Confirmed — with BeyondX',
+    dot: 'bg-ink-700',
+    chip: 'bg-ink-900/10 text-ink-800',
+    note: 'You confirmed the work. BeyondX is processing the release to the worker.',
+  },
+  released: {
+    label: 'Payment released',
+    dot: 'bg-forest-600',
+    chip: 'bg-forest-600/15 text-forest-800',
+    note: 'BeyondX released the payment to the worker.',
+  },
+}
 const EMPLOYER_PROFILE: Profile = { name: 'Accra Build Co.', contact: 'Ama Mensah', phone: '024 000 0000', region: 'Greater Accra', bio: '' }
 
 const cedis = (n: number) => `GH\u20b5 ${n.toLocaleString()}`
@@ -76,19 +104,26 @@ export default function EmployerDashboard() {
   const [profile, setProfile] = useState<Profile>(EMPLOYER_PROFILE)
   const [editing, setEditing] = useState(false)
   const [announce, setAnnounce] = useState('')
+  const [toast, setToast] = useState<ToastMsg>(null)
 
   const confirmDispatch = (w: Worker) => {
-    setDispatches((d) => [{ id: Date.now(), worker: w.name, category: category!, date: 'Just now', status: 'Awaiting worker' }, ...d])
+    setDispatches((d) => [{ id: Date.now(), worker: w.name, category: category!, date: 'Just now', status: 'awaiting-worker' }, ...d])
     setPaying(null)
-    setAnnounce(`Payment successful. ${w.name} has been dispatched and will accept or decline shortly.`)
+    setAnnounce(`Payment received. ${w.name} has been dispatched and will accept or decline shortly.`)
+    setToast({ id: Date.now(), kind: 'success', title: `${w.name} dispatched`, detail: `Payment is held safely by BeyondX. ${w.name.split(' ')[0]} will accept or decline shortly — track it under Dispatch History.` })
   }
   const completeAndRate = (stars: number) => {
     if (!rating) return
-    setDispatches((d) => d.map((x) => (x.id === rating.id ? { ...x, status: 'Completed', rating: stars } : x)))
-    setAnnounce(`Work confirmed for ${rating.worker}. BeyondX will release payment.`)
+    setDispatches((d) => d.map((x) => (x.id === rating.id ? { ...x, status: 'confirmed', rating: stars } : x)))
+    setAnnounce(`Work confirmed for ${rating.worker}. BeyondX is processing the payment release.`)
+    setToast({ id: Date.now(), kind: 'success', title: 'Work confirmed', detail: `Thanks — BeyondX is now processing payment to ${rating.worker}. You'll see "Payment released" here once it's done.` })
     setRating(null)
   }
-  const addTask = (t: Posted) => { setPosted((p) => [t, ...p]); setAnnounce('Task posted. Workers can now see it.') }
+  const addTask = (t: Posted) => {
+    setPosted((p) => [t, ...p])
+    setAnnounce('Task posted. Workers can now see it.')
+    setToast({ id: Date.now(), kind: 'success', title: 'Task posted', detail: `"${t.title}" is now visible to verified workers in ${t.location}.` })
+  }
 
   return (
     <div className="min-h-screen bg-cream-100">
@@ -97,7 +132,7 @@ export default function EmployerDashboard() {
         <p aria-live="polite" className="sr-only">{announce}</p>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Stat icon={<img src="/icons/dispatches.png" alt="" className="h-5 w-5 object-contain" />} label="Active dispatches" value={`${dispatches.filter((d) => d.status !== 'Completed').length}`} />
+          <Stat icon={<img src="/icons/dispatches.png" alt="" className="h-5 w-5 object-contain" />} label="Active dispatches" value={`${dispatches.filter((d) => d.status !== 'released').length}`} />
           <Stat icon={<img src="/icons/workers.png" alt="" className="h-6 w-6 object-contain" />} label="Workers available" value={`${WORKERS.length}`} />
           <Stat icon={<img src="/icons/dispatched.png" alt="" className="h-5 w-5 object-contain" />} label="Total dispatched" value={`${dispatches.length}`} />
         </div>
@@ -172,33 +207,41 @@ export default function EmployerDashboard() {
         {tab === 'history' && (
           <div className="mt-6 space-y-3">
             {dispatches.map((d) => (
-              <div key={d.id} className="flex flex-col gap-3 rounded-xl bg-cream-50 p-4 shadow-sm ring-1 ring-ink-900/5 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                <div>
-                  <p className="font-serif text-base font-medium text-ink-900">{d.worker}</p>
-                  <p className="mt-0.5 text-sm text-ink-700">{d.category} · {d.date}</p>
-                  {d.status === 'Completed' && d.rating && (
-                    <div className="mt-1 flex items-center gap-2 text-xs text-ink-700">You rated <Stars n={d.rating} /> · <span className="text-forest-700">Payment released by BeyondX</span></div>
-                  )}
+              <div key={d.id} className="rounded-xl bg-cream-50 p-4 shadow-sm ring-1 ring-ink-900/5 sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-serif text-base font-medium text-ink-900">{d.worker}</p>
+                    <p className="mt-0.5 text-sm text-ink-700">{d.category} · {d.date}</p>
+                    {d.rating && (
+                      <div className="mt-1 flex items-center gap-2 text-xs text-ink-700">You rated <Stars n={d.rating} /></div>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${STATUS[d.status].chip}`}>
+                      <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${STATUS[d.status].dot}`} />
+                      {STATUS[d.status].label}
+                    </span>
+                    {(d.status === 'awaiting-worker' || d.status === 'on-the-job') && (
+                      <button onClick={() => setRating(d)}
+                        className="shrink-0 rounded-full bg-forest-600 px-4 py-2 text-xs font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
+                        Confirm work done &amp; rate
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
-                    d.status === 'Completed' ? 'bg-forest-600/10 text-forest-700'
-                    : d.status === 'In progress' ? 'bg-amber-100 text-amber-700'
-                    : 'bg-ink-900/10 text-ink-700'}`}>
-                    {d.status}
-                  </span>
-                  {d.status !== 'Completed' && (
-                    <button onClick={() => setRating(d)}
-                      className="shrink-0 rounded-full bg-forest-600 px-4 py-2 text-xs font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
-                      Confirm work done &amp; rate
-                    </button>
-                  )}
-                </div>
+                {STATUS[d.status].note && (
+                  <p className="mt-3 flex items-start gap-2 border-t border-ink-900/10 pt-3 text-xs leading-relaxed text-ink-700">
+                    <Info size={13} aria-hidden="true" className="mt-0.5 shrink-0 text-clay-500" />
+                    {STATUS[d.status].note}
+                  </p>
+                )}
               </div>
             ))}
           </div>
         )}
       </main>
+
+      <Toast toast={toast} onClose={() => setToast(null)} />
 
       {viewing && (
         <WorkerProfileModal
@@ -209,7 +252,7 @@ export default function EmployerDashboard() {
       )}
       {paying && <PaymentModal worker={paying} category={category!} onClose={() => setPaying(null)} onPaid={() => confirmDispatch(paying)} />}
       {rating && <RateModal worker={rating.worker} onClose={() => setRating(null)} onSubmit={completeAndRate} />}
-      {editing && <ProfileModal role="EMPLOYER" initial={profile} onClose={() => setEditing(false)} onSave={(p) => { setProfile(p); setEditing(false); setAnnounce('Profile updated.') }} />}
+      {editing && <ProfileModal role="EMPLOYER" initial={profile} onClose={() => setEditing(false)} onSave={(p) => { setProfile(p); setEditing(false); setAnnounce('Profile updated.'); setToast({ id: Date.now(), kind: 'success', title: 'Profile updated', detail: 'Your organisation details are now up to date.' }) }} />}
     </div>
   )
 }
@@ -419,7 +462,7 @@ function RateModal({ worker, onClose, onSubmit }: { worker: string; onClose: () 
           <h2 id="rate-title" className="font-serif text-xl font-medium text-ink-900">Confirm work &amp; rate</h2>
           <button onClick={onClose} aria-label="Close rating" className="rounded-lg p-1 text-ink-700 hover:bg-ink-900/5"><X size={18} aria-hidden="true" /></button>
         </div>
-        <p className="mb-4 text-sm text-ink-700">Confirm the work is done and rate <span className="font-medium text-ink-900">{worker}</span>. Once you confirm, BeyondX releases the payment we are holding to the worker.</p>
+        <p className="mb-4 text-sm text-ink-700">Confirm the work is done and rate <span className="font-medium text-ink-900">{worker}</span>. Once you confirm, BeyondX reviews and releases the payment we are holding to the worker.</p>
         <StarPicker value={stars} onChange={setStars} />
         <label htmlFor="rate-comment" className="sr-only">Feedback</label>
         <textarea id="rate-comment" value={comment} onChange={(e) => setComment(e.target.value)} rows={3} placeholder="Feedback on the work (optional)"
