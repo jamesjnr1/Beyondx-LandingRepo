@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { MapPin, Calendar, Check, X, Star, Award, RotateCcw, MessageSquare } from 'lucide-react'
+import { MapPin, Calendar, Check, X, Star, RotateCcw, MessageSquare } from 'lucide-react'
 import DashboardHeader from './DashboardHeader'
 import ReferralCard from '../components/ReferralCard'
 import ProfileModal, { type Profile } from '../components/ProfileModal'
@@ -96,7 +96,7 @@ export default function WorkerDashboard() {
         <p aria-live="polite" className="sr-only">{announce}</p>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Stat icon={<Award size={20} />} label="Current rank" value="Bronze" />
+          <Stat icon={<Star size={20} />} label="Your rating" value="4.8" />
           <Stat icon={<img src="/icons/tasks.png" alt="" className="h-5 w-5 object-contain" />} label="Tasks completed" value={`${history.length + 10}`} />
           <Stat icon={<img src="/icons/wallet.png" alt="" className="h-5 w-5 object-contain" />} label="Total earned" value={cedis(1240)} />
         </div>

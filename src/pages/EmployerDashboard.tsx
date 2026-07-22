@@ -1,19 +1,19 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { ChevronLeft, ChevronRight, Star, Send, Phone, Briefcase, Plus, X, ShieldCheck } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Star, Send, Phone, Briefcase, Plus, X, ShieldCheck, CircleCheck } from 'lucide-react'
 import DashboardHeader from './DashboardHeader'
 import ProfileModal, { type Profile } from '../components/ProfileModal'
 import { categories } from '../data'
 
-type Worker = { id: number; name: string; initials: string; rank: 'Gold' | 'Silver' | 'Bronze'; rating: number; jobs: number; phone: string; experience: string; skills: string[]; avgPay: number }
+type Worker = { id: number; name: string; initials: string; rating: number; jobs: number; phone: string; experience: string; skills: string[]; avgPay: number }
 type Status = 'Awaiting worker' | 'In progress' | 'Completed'
 type Dispatch = { id: number; worker: string; category: string; date: string; status: Status; rating?: number }
 type Posted = { id: number; title: string; category: string; location: string; date: string; pay: number }
 
 const WORKERS: Worker[] = [
-  { id: 1, name: 'Kofi Asante', initials: 'KA', rank: 'Gold', rating: 5, jobs: 48, phone: '024 123 4567', experience: '6 years', skills: ['Logistics', 'Warehouse', 'Heavy lifting'], avgPay: 130 },
-  { id: 2, name: 'Yaw Boateng', initials: 'YB', rank: 'Silver', rating: 4, jobs: 23, phone: '020 987 6543', experience: '3 years', skills: ['Painting', 'Tiling'], avgPay: 110 },
-  { id: 3, name: 'Ama Serwaa', initials: 'AS', rank: 'Silver', rating: 5, jobs: 31, phone: '055 456 7890', experience: '4 years', skills: ['Cleaning', 'Facility care'], avgPay: 95 },
-  { id: 4, name: 'Kwesi Owusu', initials: 'KO', rank: 'Bronze', rating: 4, jobs: 9, phone: '026 321 0987', experience: '1 year', skills: ['General labour', 'Events'], avgPay: 85 },
+  { id: 1, name: 'Kofi Asante', initials: 'KA', rating: 5, jobs: 48, phone: '024 123 4567', experience: '6 years', skills: ['Logistics', 'Warehouse', 'Heavy lifting'], avgPay: 130 },
+  { id: 2, name: 'Yaw Boateng', initials: 'YB', rating: 4, jobs: 23, phone: '020 987 6543', experience: '3 years', skills: ['Painting', 'Tiling'], avgPay: 110 },
+  { id: 3, name: 'Ama Serwaa', initials: 'AS', rating: 5, jobs: 31, phone: '055 456 7890', experience: '4 years', skills: ['Cleaning', 'Facility care'], avgPay: 95 },
+  { id: 4, name: 'Kwesi Owusu', initials: 'KO', rating: 4, jobs: 9, phone: '026 321 0987', experience: '1 year', skills: ['General labour', 'Events'], avgPay: 85 },
 ]
 const INITIAL_DISPATCH: Dispatch[] = [
   { id: 100, worker: 'Kofi Asante', category: 'Logistics & Delivery', date: 'Yesterday', status: 'Completed', rating: 5 },
@@ -22,11 +22,6 @@ const INITIAL_DISPATCH: Dispatch[] = [
 const EMPLOYER_PROFILE: Profile = { name: 'Accra Build Co.', contact: 'Ama Mensah', phone: '024 000 0000', region: 'Greater Accra', bio: '' }
 
 const cedis = (n: number) => `GH\u20b5 ${n.toLocaleString()}`
-const rankStyle: Record<Worker['rank'], string> = {
-  Gold: 'bg-amber-100 text-amber-700',
-  Silver: 'bg-ink-900/10 text-ink-700',
-  Bronze: 'bg-orange-100 text-orange-700',
-}
 
 function useEsc(onClose: () => void) {
   useEffect(() => {
@@ -157,7 +152,6 @@ export default function EmployerDashboard() {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-serif text-base font-medium text-ink-900">{w.name}</span>
                       <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-700">
-                        <span className={`rounded-full px-2 py-0.5 font-medium ${rankStyle[w.rank]}`}>{w.rank}</span>
                         <span className="inline-flex items-center gap-0.5"><Star size={12} aria-hidden="true" className="fill-forest-600 text-forest-600" /> {w.rating}.0</span>
                         <span>· {w.jobs} tasks done</span>
                       </span>
@@ -238,7 +232,6 @@ function WorkerProfileModal({ worker, onClose, onDispatch }: { worker: Worker; o
           </span>
           <h2 id="wp-title" className="mt-3 font-serif text-2xl font-medium text-cream-50">{worker.name}</h2>
           <div className="mt-2 flex items-center justify-center gap-2">
-            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${rankStyle[worker.rank]}`}>{worker.rank} Rank</span>
             <span className="inline-flex items-center gap-1 rounded-full bg-cream-50/15 px-2.5 py-0.5 text-xs font-semibold text-cream-50">
               <Star size={12} aria-hidden="true" className="fill-cream-50 text-cream-50" /> {worker.rating}.0
             </span>
@@ -280,19 +273,17 @@ function WorkerProfileModal({ worker, onClose, onDispatch }: { worker: Worker; o
 
           <div>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-clay-500">Certified Skills</h3>
-            <div className="flex flex-wrap gap-1.5">
-              {worker.skills.map((s) => (
-                <span key={s} className="rounded-full bg-forest-600/10 px-3 py-1 text-xs font-medium text-forest-700">{s}</span>
+            <ul className="overflow-hidden rounded-xl ring-1 ring-ink-900/10">
+              {worker.skills.map((s, i) => (
+                <li key={s} className={`flex items-center gap-3 px-4 py-3 ${i % 2 ? 'bg-cream-100/60' : 'bg-cream-50'}`}>
+                  <CircleCheck size={16} aria-hidden="true" className="shrink-0 text-forest-600" />
+                  <span className="flex-1 text-sm font-medium text-ink-900">{s}</span>
+                  <span className="shrink-0 rounded-full bg-forest-600/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-forest-700">
+                    Certified
+                  </span>
+                </li>
               ))}
-            </div>
-          </div>
-
-          <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-clay-500">Digital Work Record</h3>
-            <p className="text-sm leading-relaxed text-ink-700">
-              Every task {worker.name.split(' ')[0]} completes is logged with GPS-verified attendance
-              and an employer rating, building a verified record over time.
-            </p>
+            </ul>
           </div>
         </div>
 

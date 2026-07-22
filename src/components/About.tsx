@@ -72,21 +72,6 @@ export default function About() {
           </div>
         ))}
 
-        <motion.figure
-          initial={{ opacity: 0, y: 24 }}
-          animate={visible ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.7 }}
-          className="mx-auto max-w-3xl rounded-2xl border border-ink-900/8 bg-cream-100 p-8 text-center sm:p-12"
-        >
-          <span aria-hidden="true" className="font-serif text-5xl leading-none text-clay-400/50">&ldquo;</span>
-          <blockquote className="mt-2 font-serif text-xl font-medium leading-relaxed text-ink-900 text-pretty sm:text-2xl">
-            Before BeyondX, I had skills but no platform. Now I have a work record,
-            a wage, and employers who call me back.
-          </blockquote>
-          <figcaption className="mt-5 text-sm font-semibold uppercase tracking-wider text-clay-500">
-            — Kofi A., BX-00142 · Facility Cleaning Specialist
-          </figcaption>
-        </motion.figure>
       </div>
     </section>
   )

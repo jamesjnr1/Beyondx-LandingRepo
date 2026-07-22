@@ -3,7 +3,6 @@ import Stats from '../components/Stats'
 import About from '../components/About'
 import HowItWorks from '../components/HowItWorks'
 import WorkerCategories from '../components/WorkerCategories'
-import PlatformDesign from '../components/PlatformDesign'
 import Pillars from '../components/Pillars'
 import Transparency from '../components/Transparency'
 import Testimonial from '../components/Testimonial'
@@ -20,7 +19,6 @@ export default function Home() {
       <About />
       <HowItWorks />
       <WorkerCategories />
-      <PlatformDesign />
       <Pillars />
       <Transparency />
       <Sponsors />

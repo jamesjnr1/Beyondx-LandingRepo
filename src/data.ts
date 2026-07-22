@@ -73,37 +73,32 @@ export interface Step {
   number: string
   title: string
   description: string
-  tag: string
 }
 
 export const steps: Step[] = [
   {
-    number: '1',
-    title: 'Screen & Certify',
+    number: '01',
+    title: 'Post a task or pick a worker',
     description:
-      'Workers are assessed for skills and readiness. Eligible candidates complete BeyondX certification.',
-    tag: 'BeyondX Vetting',
+      'Describe the job you need done — or browse verified worker profiles and dispatch someone directly.',
   },
   {
-    number: '2',
-    title: 'Match to Task',
+    number: '02',
+    title: 'We match and confirm',
     description:
-      'Employers browse categories and profiles. Coordinators confirm availability within 24 hours.',
-    tag: 'Employer Platform',
+      'Our coordinators confirm the skill match, agree on timing, and handle the logistics.',
   },
   {
-    number: '3',
-    title: 'Dispatch & Track',
+    number: '03',
+    title: 'Work begins — GPS-verified',
     description:
-      'Workers are dispatched with GPS check-in. Attendance is logged and shared in real time.',
-    tag: 'GPS-Verified',
+      'Attendance is logged through GPS check-in at your site. Real-time confirmation your worker arrived.',
   },
   {
-    number: '4',
-    title: 'Rate & Record',
+    number: '04',
+    title: 'Pay securely via mobile money',
     description:
-      'Employers rate each task. Ratings build a verified digital work record for every worker.',
-    tag: 'Digital Work Record',
+      'When the task is complete and approved, payment is settled through secure mobile money. 15% fee, 85% to the worker.',
   },
 ]
 
