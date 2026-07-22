@@ -5,7 +5,7 @@ import ProfileModal from '../components/ProfileModal'
 import Toast, { type ToastMsg } from '../components/Toast'
 import { tasks as tasksApi, workers as workersApi, employers as employersApi, session, ApiError, type Task, type Worker, type Employer } from '../lib/api'
 
-const cedis = (n?: number) => `GH\u20b5 ${Number(n || 0).toLocaleString()}`
+const cedis = (n?: number | string) => `GH\u20b5 ${Number(n || 0).toLocaleString()}`
 const wName = (w: Worker) => (w.fullName as string) || (w.name as string) || 'Worker'
 const wInitials = (w: Worker) => wName(w).split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()
 const wSkills = (w: Worker): string[] => (Array.isArray(w.skills) ? (w.skills as string[]) : (w.cats as string[]) || [])

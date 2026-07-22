@@ -6,7 +6,7 @@ import ProfileModal, { type Profile } from '../components/ProfileModal'
 import Toast, { type ToastMsg } from '../components/Toast'
 import { tasks as tasksApi, workers as workersApi, session, ApiError, type Task, type Worker } from '../lib/api'
 
-const cedis = (n?: number) => `GH\u20b5 ${Number(n || 0).toLocaleString()}`
+const cedis = (n?: number | string) => `GH\u20b5 ${Number(n || 0).toLocaleString()}`
 
 const employerName = (t: Task) =>
   typeof t.employer === 'string' ? t.employer : t.employer?.orgName || t.employer?.name || 'BeyondX employer'

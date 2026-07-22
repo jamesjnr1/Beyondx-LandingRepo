@@ -61,7 +61,7 @@ export type Task = {
   description?: string
   location?: string
   duration?: string
-  pay?: number
+  pay?: number | string
   status?: TaskStatus
   employer?: string | { orgName?: string; name?: string }
   acceptedBy?: string | number
