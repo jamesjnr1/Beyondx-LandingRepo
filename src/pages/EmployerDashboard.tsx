@@ -76,6 +76,7 @@ export default function EmployerDashboard() {
   const [dispatches, setDispatches] = useState<Dispatch[]>(INITIAL_DISPATCH)
   const [rating, setRating] = useState<Dispatch | null>(null)
   const [paying, setPaying] = useState<Worker | null>(null)
+  const [viewing, setViewing] = useState<Worker | null>(null)
   const [posted, setPosted] = useState<Posted[]>([])
   const [profile, setProfile] = useState<Profile>(EMPLOYER_PROFILE)
   const [editing, setEditing] = useState(false)
@@ -89,7 +90,7 @@ export default function EmployerDashboard() {
   const completeAndRate = (stars: number) => {
     if (!rating) return
     setDispatches((d) => d.map((x) => (x.id === rating.id ? { ...x, status: 'Completed', rating: stars } : x)))
-    setAnnounce(`${rating.worker} marked complete. Payment released.`)
+    setAnnounce(`Work confirmed for ${rating.worker}. BeyondX will release payment.`)
     setRating(null)
   }
   const addTask = (t: Posted) => { setPosted((p) => [t, ...p]); setAnnounce('Task posted. Workers can now see it.') }
@@ -144,37 +145,29 @@ export default function EmployerDashboard() {
             </button>
             <h2 className="mb-1 font-serif text-xl font-medium text-ink-900">Available workers</h2>
             <p className="mb-4 text-sm text-ink-700">Verified workers for <span className="font-medium text-ink-900">{category}</span></p>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <ul className="divide-y divide-ink-900/10 overflow-hidden rounded-2xl bg-cream-50 shadow-sm ring-1 ring-ink-900/5">
               {WORKERS.map((w) => (
-                <div key={w.id} className="rounded-2xl bg-cream-50 p-5 shadow-sm ring-1 ring-ink-900/5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-forest-600 text-base font-bold text-cream-50">{w.initials}</span>
-                      <div className="min-w-0">
-                        <p className="truncate font-serif text-lg font-medium text-ink-900">{w.name}</p>
-                        <div className="mt-0.5 flex items-center gap-2 text-xs text-ink-700">
-                          <span className={`rounded-full px-2 py-0.5 font-medium ${rankStyle[w.rank]}`}>{w.rank}</span>
-                          <span className="inline-flex items-center gap-0.5"><Star size={12} aria-hidden="true" className="fill-forest-600 text-forest-600" /> {w.rating}.0</span>
-                        </div>
-                      </div>
-                    </div>
-                    <button onClick={() => setPaying(w)} aria-label={`Dispatch ${w.name}`}
-                      className="flex shrink-0 items-center gap-1.5 rounded-full bg-forest-600 px-4 py-2 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
-                      <Send size={15} aria-hidden="true" /> Dispatch
-                    </button>
-                  </div>
-                  <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-ink-900/10 pt-4 text-sm">
-                    <div className="flex items-center gap-2 text-ink-700"><Phone size={15} aria-hidden="true" className="text-forest-600" /> <dd>{w.phone}</dd></div>
-                    <div className="flex items-center gap-2 text-ink-700"><Briefcase size={15} aria-hidden="true" className="text-forest-600" /> <dd>{w.experience} experience</dd></div>
-                    <div className="text-ink-700"><dd><span className="font-semibold text-ink-900">{w.jobs}</span> tasks done</dd></div>
-                    <div className="text-ink-700"><dd><span className="font-semibold text-ink-900">{cedis(w.avgPay)}</span> avg / task</dd></div>
-                  </dl>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {w.skills.map((s) => <span key={s} className="rounded-full bg-forest-600/10 px-2.5 py-0.5 text-xs font-medium text-forest-700">{s}</span>)}
-                  </div>
-                </div>
+                <li key={w.id}>
+                  <button
+                    onClick={() => setViewing(w)}
+                    aria-label={`View ${w.name}'s profile`}
+                    className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-forest-600/5 focus:outline-none focus-visible:bg-forest-600/5 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest-600/40 sm:px-5"
+                  >
+                    <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-forest-600 text-sm font-bold text-cream-50">{w.initials}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-serif text-base font-medium text-ink-900">{w.name}</span>
+                      <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-700">
+                        <span className={`rounded-full px-2 py-0.5 font-medium ${rankStyle[w.rank]}`}>{w.rank}</span>
+                        <span className="inline-flex items-center gap-0.5"><Star size={12} aria-hidden="true" className="fill-forest-600 text-forest-600" /> {w.rating}.0</span>
+                        <span>· {w.jobs} tasks done</span>
+                      </span>
+                    </span>
+                    <span className="hidden shrink-0 text-sm font-medium text-forest-700 sm:inline">View profile</span>
+                    <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-ink-700" />
+                  </button>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         )}
 
@@ -190,7 +183,7 @@ export default function EmployerDashboard() {
                   <p className="font-serif text-base font-medium text-ink-900">{d.worker}</p>
                   <p className="mt-0.5 text-sm text-ink-700">{d.category} · {d.date}</p>
                   {d.status === 'Completed' && d.rating && (
-                    <div className="mt-1 flex items-center gap-2 text-xs text-ink-700">You rated <Stars n={d.rating} /> · <span className="text-forest-700">Payment released</span></div>
+                    <div className="mt-1 flex items-center gap-2 text-xs text-ink-700">You rated <Stars n={d.rating} /> · <span className="text-forest-700">Payment released by BeyondX</span></div>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
@@ -203,7 +196,7 @@ export default function EmployerDashboard() {
                   {d.status !== 'Completed' && (
                     <button onClick={() => setRating(d)}
                       className="shrink-0 rounded-full bg-forest-600 px-4 py-2 text-xs font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
-                      Mark complete &amp; rate
+                      Confirm work done &amp; rate
                     </button>
                   )}
                 </div>
@@ -213,9 +206,104 @@ export default function EmployerDashboard() {
         )}
       </main>
 
+      {viewing && (
+        <WorkerProfileModal
+          worker={viewing}
+          onClose={() => setViewing(null)}
+          onDispatch={() => { const w = viewing; setViewing(null); setPaying(w) }}
+        />
+      )}
       {paying && <PaymentModal worker={paying} category={category!} onClose={() => setPaying(null)} onPaid={() => confirmDispatch(paying)} />}
       {rating && <RateModal worker={rating.worker} onClose={() => setRating(null)} onSubmit={completeAndRate} />}
       {editing && <ProfileModal role="EMPLOYER" initial={profile} onClose={() => setEditing(false)} onSave={(p) => { setProfile(p); setEditing(false); setAnnounce('Profile updated.') }} />}
+    </div>
+  )
+}
+
+function WorkerProfileModal({ worker, onClose, onDispatch }: { worker: Worker; onClose: () => void; onDispatch: () => void }) {
+  useEsc(onClose)
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/50 p-4" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-labelledby="wp-title"
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-cream-50 shadow-xl" onClick={(e) => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="relative rounded-t-2xl bg-forest-700 px-6 pb-6 pt-6 text-center">
+          <button onClick={onClose} aria-label="Close profile"
+            className="absolute right-4 top-4 rounded-lg p-1 text-cream-50/80 transition-colors hover:bg-cream-50/10 hover:text-cream-50">
+            <X size={18} aria-hidden="true" />
+          </button>
+          <span aria-hidden="true" className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-cream-50 font-serif text-2xl font-bold text-forest-700 shadow-md">
+            {worker.initials}
+          </span>
+          <h2 id="wp-title" className="mt-3 font-serif text-2xl font-medium text-cream-50">{worker.name}</h2>
+          <div className="mt-2 flex items-center justify-center gap-2">
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${rankStyle[worker.rank]}`}>{worker.rank} Rank</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-cream-50/15 px-2.5 py-0.5 text-xs font-semibold text-cream-50">
+              <Star size={12} aria-hidden="true" className="fill-cream-50 text-cream-50" /> {worker.rating}.0
+            </span>
+          </div>
+          <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-cream-200/90">
+            <ShieldCheck size={14} aria-hidden="true" /> BeyondX Verified · Certified Worker
+          </p>
+        </div>
+
+        {/* Record */}
+        <div className="grid grid-cols-2 gap-3 border-b border-ink-900/10 p-6">
+          <div className="rounded-xl bg-cream-100 p-4 text-center">
+            <span className="block font-serif text-2xl font-semibold text-ink-900">{worker.jobs}</span>
+            <span className="text-xs text-ink-700">Tasks completed</span>
+          </div>
+          <div className="rounded-xl bg-cream-100 p-4 text-center">
+            <span className="block font-serif text-2xl font-semibold text-ink-900">{cedis(worker.avgPay)}</span>
+            <span className="text-xs text-ink-700">Average pay / task</span>
+          </div>
+        </div>
+
+        {/* Details */}
+        <div className="space-y-4 p-6">
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-clay-500">Contact &amp; Experience</h3>
+            <dl className="space-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Phone size={15} aria-hidden="true" className="shrink-0 text-forest-600" />
+                <dt className="sr-only">Phone number</dt>
+                <dd className="text-ink-900">{worker.phone}</dd>
+              </div>
+              <div className="flex items-center gap-2">
+                <Briefcase size={15} aria-hidden="true" className="shrink-0 text-forest-600" />
+                <dt className="sr-only">Experience</dt>
+                <dd className="text-ink-900">{worker.experience} of experience</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-clay-500">Certified Skills</h3>
+            <div className="flex flex-wrap gap-1.5">
+              {worker.skills.map((s) => (
+                <span key={s} className="rounded-full bg-forest-600/10 px-3 py-1 text-xs font-medium text-forest-700">{s}</span>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-clay-500">Digital Work Record</h3>
+            <p className="text-sm leading-relaxed text-ink-700">
+              Every task {worker.name.split(' ')[0]} completes is logged with GPS-verified attendance
+              and an employer rating, building a verified record over time.
+            </p>
+          </div>
+        </div>
+
+        {/* Action */}
+        <div className="border-t border-ink-900/10 p-6">
+          <button onClick={onDispatch} aria-label={`Dispatch ${worker.name}`}
+            className="flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
+            <Send size={15} aria-hidden="true" /> Dispatch {worker.name.split(' ')[0]}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -285,7 +373,7 @@ function PaymentModal({ worker, category, onClose, onPaid }: { worker: Worker; c
           <h2 id="pay-title" className="font-serif text-xl font-medium text-ink-900">Confirm &amp; pay</h2>
           <button onClick={onClose} aria-label="Cancel payment" className="rounded-lg p-1 text-ink-700 hover:bg-ink-900/5"><X size={18} aria-hidden="true" /></button>
         </div>
-        <p className="mb-4 text-sm text-ink-700">Payment is held securely and released to <span className="font-medium text-ink-900">{worker.name}</span> only after the job is completed and rated.</p>
+        <p className="mb-4 text-sm text-ink-700">Your payment is held securely by BeyondX. We release it to <span className="font-medium text-ink-900">{worker.name}</span> once you confirm the work is done.</p>
 
         <div className="mb-4 rounded-xl bg-forest-600/5 p-4 ring-1 ring-forest-600/15">
           <div className="flex items-center justify-between text-sm">
@@ -337,16 +425,16 @@ function RateModal({ worker, onClose, onSubmit }: { worker: string; onClose: () 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/50 p-4" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-labelledby="rate-title" className="w-full max-w-md rounded-2xl bg-cream-50 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-1 flex items-center justify-between">
-          <h2 id="rate-title" className="font-serif text-xl font-medium text-ink-900">Rate &amp; complete</h2>
+          <h2 id="rate-title" className="font-serif text-xl font-medium text-ink-900">Confirm work &amp; rate</h2>
           <button onClick={onClose} aria-label="Close rating" className="rounded-lg p-1 text-ink-700 hover:bg-ink-900/5"><X size={18} aria-hidden="true" /></button>
         </div>
-        <p className="mb-4 text-sm text-ink-700">Rate <span className="font-medium text-ink-900">{worker}</span>'s work. Payment is released to the worker once you complete this step.</p>
+        <p className="mb-4 text-sm text-ink-700">Confirm the work is done and rate <span className="font-medium text-ink-900">{worker}</span>. Once you confirm, BeyondX releases the payment we are holding to the worker.</p>
         <StarPicker value={stars} onChange={setStars} />
         <label htmlFor="rate-comment" className="sr-only">Feedback</label>
         <textarea id="rate-comment" value={comment} onChange={(e) => setComment(e.target.value)} rows={3} placeholder="Feedback on the work (optional)"
           className="mt-4 w-full rounded-xl border border-ink-900/15 bg-white p-3 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
         <button onClick={() => onSubmit(stars)} className="mt-4 w-full rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
-          Complete &amp; release payment
+          Confirm work is done
         </button>
       </div>
     </div>
