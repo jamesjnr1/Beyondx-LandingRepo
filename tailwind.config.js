@@ -3,6 +3,22 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      // Tightened type scale. Small sizes keep their defaults so body copy stays
+      // readable (16px base, 14px minimum for secondary text); the display sizes
+      // are pulled in, which is where the page was reading oversized.
+      fontSize: {
+        xs: ['0.75rem', { lineHeight: '1.05rem' }],      // 12px
+        sm: ['0.875rem', { lineHeight: '1.3rem' }],      // 14px
+        base: ['1rem', { lineHeight: '1.55rem' }],       // 16px
+        lg: ['1.0625rem', { lineHeight: '1.65rem' }],    // 17px  (was 18)
+        xl: ['1.1875rem', { lineHeight: '1.7rem' }],     // 19px  (was 20)
+        '2xl': ['1.375rem', { lineHeight: '1.85rem' }],  // 22px  (was 24)
+        '3xl': ['1.625rem', { lineHeight: '2.05rem' }],  // 26px  (was 30)
+        '4xl': ['1.9375rem', { lineHeight: '2.3rem' }],  // 31px  (was 36)
+        '5xl': ['2.5rem', { lineHeight: '2.75rem' }],    // 40px  (was 48)
+        '6xl': ['3rem', { lineHeight: '3.2rem' }],       // 48px  (was 60)
+        '7xl': ['3.5rem', { lineHeight: '3.65rem' }],    // 56px  (was 72)
+      },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         serif: ['Fraunces', 'Georgia', 'serif'],
