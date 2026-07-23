@@ -149,6 +149,16 @@ tr:hover td{background:var(--bg);}
 .trow{cursor:pointer;}
 .trow:hover{background:var(--g4);}
 .btn-r.on{background:var(--g);color:#fff;border-color:var(--g);}
+.menu-wrap{position:relative;}
+.menu{position:absolute;right:0;top:calc(100% + 6px);min-width:250px;background:#fff;border:1.5px solid var(--b);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.13);padding:6px;z-index:60;}
+.menu button{display:block;width:100%;text-align:left;padding:9px 10px;background:none;border:0;border-radius:7px;cursor:pointer;font-family:var(--f);}
+.menu button:hover{background:var(--g4);}
+.menu button.danger:hover{background:#fdf2f2;}
+.menu .mi-t{display:block;font-size:12px;font-weight:600;color:var(--ink);}
+.menu button.danger .mi-t{color:#b91c1c;}
+.menu .mi-s{display:block;font-size:10.5px;color:var(--ink3);margin-top:1px;}
+.menu-sep{height:1px;background:var(--b);margin:6px 4px;}
+.menu-lbl{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);padding:4px 10px 2px;}
 .an-ctl{display:flex;gap:8px;margin-bottom:16px;align-items:center;}
 .an-up{color:var(--g2);font-weight:600;}
 .an-dn{color:#b91c1c;font-weight:600;}
@@ -188,6 +198,7 @@ tr:hover td{background:var(--bg);}
       <div class="sb-grp">Payments</div>
       <div class="sb-a" onclick="nav('payconfirm',this)">Payment Confirmations</div>
       <div class="sb-grp">Messages</div>
+      <div class="sb-a" onclick="nav('notify',this)">Send Notification</div>
       <div class="sb-a" onclick="nav('messages',this)">SMS Log <span class="sb-bdg" id="smsBadge" style="display:none;background:#dc2626;">!</span></div>
     </div>
     <div class="sb-ft" id="sbTime"></div>
@@ -197,11 +208,27 @@ tr:hover td{background:var(--bg);}
       <div class="tb-title" id="pageTitle">Overview</div>
       <div class="tb-r">
         <span class="tb-t" id="tbTime"></span>
-        <div class="live"><div class="dot"></div>Live</div>
+        <span class="live"><span class="dot"></span>Live</span>
         <button class="btn-r" onclick="load()">Refresh</button>
-        <button class="btn-r" style="color:#b91c1c;border-color:#f3c9c9;" onclick="confirmClearData()">Clear All Data</button>
-        <button class="btn-r" style="color:#b91c1c;border-color:#f3c9c9;" onclick="confirmClearEmployers()">Delete All Employers</button>
-        <button class="btn-r" style="color:var(--g2);border-color:var(--b);" onclick="sendDormantReminders()">Send Dormant Reminders</button>
+        <div class="menu-wrap">
+          <button class="btn-r" id="actionsBtn" aria-haspopup="true" aria-expanded="false" onclick="toggleActions(event)">Actions ▾</button>
+          <div class="menu" id="actionsMenu" role="menu" hidden>
+            <button role="menuitem" onclick="closeActions();sendDormantReminders()">
+              <span class="mi-t">Send dormant reminders</span>
+              <span class="mi-s">Nudge workers who have been inactive</span>
+            </button>
+            <div class="menu-sep"></div>
+            <div class="menu-lbl">Danger zone</div>
+            <button role="menuitem" class="danger" onclick="closeActions();confirmClearData()">
+              <span class="mi-t">Clear all data</span>
+              <span class="mi-s">Removes tasks and activity</span>
+            </button>
+            <button role="menuitem" class="danger" onclick="closeActions();confirmClearEmployers()">
+              <span class="mi-t">Delete all employers</span>
+              <span class="mi-s">Removes every employer account</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="body">
@@ -229,6 +256,41 @@ tr:hover td{background:var(--bg);}
       <div class="sec" id="sec-transactions"><div id="txContent"></div></div>
       <div class="sec" id="sec-messages"><div id="messagesContent"></div></div>
       <div class="sec" id="sec-employers"><input class="srch" id="eSearch" placeholder="Search employers by organisation or phone…" oninput="eSearchInput()"/><div class="tc"><div class="tc-h"><span class="tc-ht">Employers</span><span class="tc-hm" id="ec"></span></div><table><thead><tr><th>Organisation</th><th>Phone</th><th>Tasks</th><th>Completed</th><th>Total Spent</th></tr></thead><tbody id="et"></tbody></table><div id="etMore"></div></div></div>
+      <div class="sec" id="sec-notify">
+        <div class="an-note">
+          Send an update to workers, employers, or everyone. Messages go out by SMS, which reaches people who do not use smartphones. Automatic notifications inside the app keep running as normal.
+        </div>
+        <div class="tc" style="margin-bottom:16px;">
+          <div class="tc-h"><span class="tc-ht">Compose</span><span class="tc-hm" id="ntCount">—</span></div>
+          <div style="padding:16px;">
+            <div class="fld" style="margin-bottom:12px;">
+              <label style="display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;">Send to</label>
+              <button class="btn-r ntaud on" data-aud="workers" onclick="ntAudience('workers',this)">Workers</button>
+              <button class="btn-r ntaud" data-aud="employers" style="margin-left:6px;" onclick="ntAudience('employers',this)">Employers</button>
+              <button class="btn-r ntaud" data-aud="both" style="margin-left:6px;" onclick="ntAudience('both',this)">Everyone</button>
+            </div>
+            <div class="fld" style="margin-bottom:12px;">
+              <label style="display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;">Quick templates</label>
+              <button class="btn-r" onclick="ntTemplate('work')">New work available</button>
+              <button class="btn-r" style="margin-left:6px;" onclick="ntTemplate('update')">Platform update</button>
+              <button class="btn-r" style="margin-left:6px;" onclick="ntTemplate('event')">Event / training</button>
+              <button class="btn-r" style="margin-left:6px;" onclick="ntTemplate('reminder')">Profile reminder</button>
+            </div>
+            <div class="fld" style="margin-bottom:6px;">
+              <label style="display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;">Message</label>
+              <textarea id="ntMessage" rows="5" maxlength="480" oninput="ntChars()" placeholder="Write your update…" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
+              <div class="tb-t" style="margin-top:6px;" id="ntChars">0 characters · about 1 SMS</div>
+            </div>
+            <button class="btn-r on" onclick="ntSend()">Review &amp; send</button>
+            <button class="btn-r" style="margin-left:8px;" onclick="document.getElementById('ntMessage').value='';ntChars()">Clear</button>
+          </div>
+        </div>
+        <div class="tc">
+          <div class="tc-h"><span class="tc-ht">Sent this session</span></div>
+          <div id="ntLog"></div>
+        </div>
+      </div>
+
       <div class="sec" id="sec-payconfirm">
         <div class="an-note">
           Use this once BeyondX has received an employer's dispatch payment. It sends them an SMS confirming the money arrived and that the worker has been notified.
@@ -373,8 +435,9 @@ function nav(id,el){
   document.querySelectorAll('.sb-a').forEach(n=>n.classList.remove('on'));
   document.getElementById('sec-'+id).classList.add('on');
   el.classList.add('on');
-  const T={overview:'Overview',payouts:'Pay Now',active:'In Progress',open:'Open Tasks',completed:'Completed Tasks',all:'All Tasks',workers:'Workers',employers:'Employers',history:'Work History',transactions:'Transactions',messages:'SMS Log',analytics:'Site Analytics',payconfirm:'Payment Confirmations'};
+  const T={overview:'Overview',payouts:'Pay Now',active:'In Progress',open:'Open Tasks',completed:'Completed Tasks',all:'All Tasks',workers:'Workers',employers:'Employers',history:'Work History',transactions:'Transactions',messages:'SMS Log',analytics:'Site Analytics',payconfirm:'Payment Confirmations',notify:'Send Notification'};
   document.getElementById('pageTitle').textContent=T[id]||id;
+  if(id==='notify'){ ntChars(); ntRenderLog(); ntRecipients().then(n=>{ document.getElementById('ntCount').textContent = n===null?'—':`${n} recipient${n===1?'':'s'}`; }); return; }
   if(id==='payconfirm'){ pcEmployerList().then(pcPreview); pcRenderLog(); return; }
   if(id==='analytics'){if(!anData)loadAnalytics();return;}
   if(id!=='overview')rs(id);
@@ -925,6 +988,116 @@ function pcRenderLog(){
   el.innerHTML = pcSentLog.length
     ? pcSentLog.map(x=>`<div class="trow" style="display:flex;justify-content:space-between;padding:12px 16px;"><span class="tn">${anEsc(x.org)}</span><span class="tm">${anEsc(x.phone)} · ${anEsc(x.at)}</span></div>`).join('')
     : '<div class="empty">No confirmations sent in this session.</div>';
+}
+
+
+/* ---------- top bar actions menu ---------- */
+function toggleActions(e){
+  e.stopPropagation();
+  const m=document.getElementById('actionsMenu');
+  const b=document.getElementById('actionsBtn');
+  const show=m.hidden;
+  m.hidden=!show;
+  b.setAttribute('aria-expanded',show?'true':'false');
+}
+function closeActions(){
+  const m=document.getElementById('actionsMenu');
+  if(m){m.hidden=true;document.getElementById('actionsBtn').setAttribute('aria-expanded','false');}
+}
+document.addEventListener('click',closeActions);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape')closeActions(); });
+
+
+/* =================== SEND NOTIFICATION =================== */
+let ntAud = 'workers';
+const ntLog = [];
+
+function ntAudience(a, el){
+  ntAud = a;
+  document.querySelectorAll('.ntaud').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  ntRecipients().then(n=>{
+    document.getElementById('ntCount').textContent = n===null ? '—' : `${n} recipient${n===1?'':'s'}`;
+  });
+}
+
+async function ntRecipients(){
+  try{
+    const phones = await ntPhones();
+    return phones.length;
+  }catch(e){ return null; }
+}
+
+async function ntPhones(){
+  let list = [];
+  if(ntAud==='workers'||ntAud==='both'){
+    const d = await fetch(API+'/admin/workers',{headers:{'x-admin-password':pass}}).then(r=>r.json());
+    list = list.concat((d.workers||[]).map(w=>w.phone).filter(Boolean));
+  }
+  if(ntAud==='employers'||ntAud==='both'){
+    const d = await fetch(API+'/admin/employers',{headers:{'x-admin-password':pass}}).then(r=>r.json());
+    list = list.concat((d.employers||[]).map(e=>e.phone).filter(Boolean));
+  }
+  return [...new Set(list)];
+}
+
+function ntChars(){
+  const v = document.getElementById('ntMessage').value;
+  const parts = Math.max(1, Math.ceil(v.length/160));
+  document.getElementById('ntChars').textContent = `${v.length} characters · about ${parts} SMS${parts>1?' per person':''}`;
+}
+
+const NT_TEMPLATES = {
+  work: 'BeyondX: New work is available on the platform. Log in at beyondxco.com to see tasks you can accept.',
+  update: 'BeyondX update: We have made improvements to the platform. Log in at beyondxco.com to see what is new.',
+  event: 'BeyondX: We have an upcoming session for our members. Reply to this message or call us to reserve your place.',
+  reminder: 'BeyondX: Please keep your profile up to date so we can match you to the right work faster. Log in at beyondxco.com.'
+};
+function ntTemplate(k){
+  document.getElementById('ntMessage').value = NT_TEMPLATES[k] || '';
+  ntChars();
+}
+
+async function ntSend(){
+  const message = document.getElementById('ntMessage').value.trim();
+  if(!message){ showToast('Write a message first.'); return; }
+  showToast('Gathering recipients…');
+  let phones;
+  try{ phones = await ntPhones(); }
+  catch(e){ showToast('Could not load recipients.'); return; }
+  if(!phones.length){ showToast('No recipients with phone numbers.'); return; }
+  const who = ntAud==='both' ? 'workers and employers' : ntAud;
+  if(!confirm(`Send this message to ${phones.length} ${who}?\n\n"${message}"`)) return;
+
+  showToast(`Sending to ${phones.length}…`);
+  let sent=0, failed=0;
+  for(const phone of phones){
+    try{
+      const r = await fetch(API+'/admin/send-sms',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-admin-password':pass},
+        body:JSON.stringify({phone, message})
+      });
+      r.ok ? sent++ : failed++;
+    }catch(e){ failed++; }
+  }
+  showToast(failed ? `Sent to ${sent}, failed for ${failed}.` : `Sent to all ${sent}.`);
+  ntLog.unshift({who, count:sent, failed, message, at:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})});
+  ntRenderLog();
+}
+
+function ntRenderLog(){
+  const el = document.getElementById('ntLog');
+  if(!el) return;
+  el.innerHTML = ntLog.length
+    ? ntLog.map(x=>`<div class="trow" style="padding:12px 16px;">
+        <div style="display:flex;justify-content:space-between;gap:12px;">
+          <span class="tn">${anEsc(x.who)} · ${x.count} sent${x.failed?` · ${x.failed} failed`:''}</span>
+          <span class="tm">${anEsc(x.at)}</span>
+        </div>
+        <div class="tm" style="margin-top:4px;">${anEsc(x.message)}</div>
+      </div>`).join('')
+    : '<div class="empty">Nothing sent in this session.</div>';
 }
 
 </script>
