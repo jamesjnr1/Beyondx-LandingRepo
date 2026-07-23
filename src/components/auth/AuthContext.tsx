@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
-import { session } from '../../lib/api'
+import { session, referral } from '../../lib/api'
 
 export type AuthView =
   | 'worker-login'
@@ -39,7 +39,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return 'home'
   }
 
-  const [view, setView] = useState<AuthView>(null)
+  const [view, setView] = useState<AuthView>(() => {
+    // Anyone arriving with ?ref= in the URL followed a worker's referral link
+    // and is here to sign up — open registration for them straight away.
+    if (typeof window === 'undefined') return null
+    const hadRefInUrl = new URLSearchParams(window.location.search).has('ref')
+    const code = referral.capture()
+    return code && hadRefInUrl ? 'worker-register' : null
+  })
   const [page, setPage] = useState<Page>(initialPage)
 
   const persistView = (p: Page) => {

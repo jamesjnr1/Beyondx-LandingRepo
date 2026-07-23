@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode, type FormEvent, type InputHTMLAttr
 import { X, ShieldCheck, HeartHandshake, ChevronLeft } from 'lucide-react'
 import Logo from '../Logo'
 import { useAuth, type AuthView } from './AuthContext'
-import { auth, session, ApiError } from '../../lib/api'
+import { auth, session, referral, ApiError } from '../../lib/api'
 
 const REGIONS = [
   'Greater Accra', 'Ashanti', 'Western', 'Central', 'Eastern',
@@ -257,12 +257,30 @@ function WorkerRegister() {
     if (busy) return
     setErr(null); setBusy(true)
     try {
-      const data = await auth.workerRegister({
+      const base = {
         fullName: f.name.trim(), phone: f.phone.trim(), prisonFacility: f.facility,
         skills, pin: f.pin.trim(), guarantorName: f.gName.trim(),
         guarantorPhone: f.gPhone.trim(), guarantorRelationship: f.relationship,
-      })
+      }
+      const ref = referral.get()
+      let data
+      if (ref) {
+        // Send the referral code, but never let it block a signup: if the
+        // backend rejects the extra field, register again without it.
+        try {
+          data = await auth.workerRegister({ ...base, referredBy: ref })
+        } catch (err) {
+          if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
+            data = await auth.workerRegister(base)
+          } else {
+            throw err
+          }
+        }
+      } else {
+        data = await auth.workerRegister(base)
+      }
       session.saveWorker(data.token, data.worker)
+      referral.clear()
       open('worker-onboarding')
     } catch (e2) {
       setErr(errText(e2))

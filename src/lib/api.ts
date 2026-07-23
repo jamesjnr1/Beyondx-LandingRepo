@@ -149,6 +149,40 @@ async function request<T>(path: string, opts: Opts = {}): Promise<T> {
   return data as T
 }
 
+
+/* ------------------------------- referrals ----------------------------- */
+
+// A worker's referral link is beyondxco.com/join?ref=<workerId>. The code is
+// captured on arrival and kept until the person finishes registering, so it
+// survives them browsing the site first.
+const REFERRAL_KEY = 'bx_referral'
+
+export const referral = {
+  // Reads ?ref= from the URL, stores it, and returns it. Safe to call repeatedly.
+  capture(): string | null {
+    if (typeof window === 'undefined') return null
+    try {
+      const code = new URLSearchParams(window.location.search).get('ref')
+      if (code && /^[A-Za-z0-9-]{3,20}$/.test(code)) {
+        localStorage.setItem(REFERRAL_KEY, code.toUpperCase())
+        return code.toUpperCase()
+      }
+      return localStorage.getItem(REFERRAL_KEY)
+    } catch {
+      return null
+    }
+  },
+  get(): string | null {
+    try { return localStorage.getItem(REFERRAL_KEY) } catch { return null }
+  },
+  clear() {
+    try { localStorage.removeItem(REFERRAL_KEY) } catch { /* ignore */ }
+  },
+  linkFor(workerId: string) {
+    return `https://beyondxco.com/join?ref=${encodeURIComponent(workerId)}`
+  },
+}
+
 /* --------------------------------- auth -------------------------------- */
 
 export type WorkerAuthResponse = { token: string; worker: Worker }
@@ -167,6 +201,7 @@ export const auth = {
     guarantorName: string
     guarantorPhone: string
     guarantorRelationship: string
+    referredBy?: string
   }) => request<WorkerAuthResponse>('/api/auth/worker-register', { method: 'POST', body: payload }),
 
   employerLogin: (email: string, password: string) =>
