@@ -8,6 +8,7 @@ const tabs: { label: string; page: Page }[] = [
   { label: 'Home', page: 'home' },
   { label: 'Meet the Team', page: 'team' },
   { label: 'Gallery', page: 'gallery' },
+  { label: 'News & Events', page: 'news' },
 ]
 
 export default function Navbar() {

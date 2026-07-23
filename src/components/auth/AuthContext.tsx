@@ -10,7 +10,7 @@ export type AuthView =
   | 'employer-onboarding'
   | null
 
-export type Page = 'home' | 'team' | 'gallery' | 'worker-dashboard' | 'employer-dashboard'
+export type Page = 'home' | 'team' | 'gallery' | 'news' | 'worker-dashboard' | 'employer-dashboard'
 
 type AppCtx = {
   view: AuthView

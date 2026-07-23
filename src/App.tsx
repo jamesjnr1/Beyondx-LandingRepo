@@ -7,6 +7,7 @@ import Footer from './components/Footer'
 import Home from './pages/Home'
 import TeamPage from './pages/TeamPage'
 import GalleryPage from './pages/GalleryPage'
+import NewsPage from './pages/NewsPage'
 import WorkerDashboard from './pages/WorkerDashboard'
 import EmployerDashboard from './pages/EmployerDashboard'
 
@@ -26,6 +27,7 @@ function Shell() {
         {page === 'home' && <Home />}
         {page === 'team' && <TeamPage />}
         {page === 'gallery' && <GalleryPage />}
+        {page === 'news' && <NewsPage />}
       </main>
       <Footer />
       <AuthModals />
