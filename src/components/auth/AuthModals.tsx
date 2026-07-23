@@ -4,6 +4,7 @@ import Logo from '../Logo'
 import { useAuth, type AuthView } from './AuthContext'
 import { auth, session, referral, ApiError } from '../../lib/api'
 import OnboardingQuestions from './OnboardingQuestions'
+import * as v from '../../lib/validate'
 
 const REGIONS = [
   'Greater Accra', 'Ashanti', 'Western', 'Central', 'Eastern',
@@ -64,23 +65,42 @@ function Modal({ title, subtitle, children }: { title: string; subtitle: string;
   )
 }
 
-function Field({ label, value, onChange, ...rest }: { label: string; value: string; onChange: (v: string) => void } & Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) {
+function Field({ label, value, onChange, error, ...rest }: { label: string; value: string; onChange: (v: string) => void; error?: string } & Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) {
+  const id = `f-${label.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-ink-800">{label}</span>
-      <input value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-lg border border-ink-900/15 bg-white px-4 py-2.5 text-ink-900 outline-none transition-colors placeholder:text-ink-700/40 focus:border-forest-500 focus:ring-2 focus:ring-forest-500/20" {...rest} />
-    </label>
+    <div className="block">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-ink-800">{label}</label>
+      <input
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-err` : undefined}
+        className={`w-full rounded-lg border bg-white px-4 py-2.5 text-ink-900 outline-none transition-colors placeholder:text-ink-700/40 focus:ring-2 ${error ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : 'border-ink-900/15 focus:border-forest-500 focus:ring-forest-500/20'}`}
+        {...rest}
+      />
+      {error && <p id={`${id}-err`} className="mt-1 text-xs text-red-700">{error}</p>}
+    </div>
   )
 }
 
-function Select({ label, options, value, onChange }: { label: string; options: string[]; value: string; onChange: (v: string) => void }) {
+function Select({ label, options, value, onChange, error, placeholder }: { label: string; options: string[]; value: string; onChange: (v: string) => void; error?: string; placeholder?: string }) {
+  const id = `s-${label.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-ink-800">{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-lg border border-ink-900/15 bg-white px-4 py-2.5 text-ink-900 outline-none transition-colors focus:border-forest-500 focus:ring-2 focus:ring-forest-500/20">
+    <div className="block">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-ink-800">{label}</label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-invalid={error ? true : undefined}
+        className={`w-full rounded-lg border bg-white px-4 py-2.5 text-ink-900 outline-none transition-colors focus:ring-2 ${error ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : 'border-ink-900/15 focus:border-forest-500 focus:ring-forest-500/20'}`}
+      >
+        {placeholder && <option value="">{placeholder}</option>}
         {options.map((o) => <option key={o}>{o}</option>)}
       </select>
-    </label>
+      {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
+    </div>
   )
 }
 
@@ -190,12 +210,22 @@ function EmployerLogin() {
 function EmployerRegister() {
   const { open } = useAuth()
   const [step, setStep] = useState(1)
-  const [f, setF] = useState({ org: '', contact: '', phone: '', region: REGIONS[0], email: '', password: '' })
+  const [f, setF] = useState({ org: '', contact: '', phone: '', region: '', email: '', password: '' })
+  const [fieldErr, setFieldErr] = useState<Record<string, string>>({})
   const set = (k: keyof typeof f) => (v: string) => setF({ ...f, [k]: v })
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const validateStep = (n: number) => {
+    const errs = n === 1
+      ? v.check({ org: v.orgName(f.org), contact: v.fullName(f.contact), phone: v.phone(f.phone), region: v.required('Region')(f.region) })
+      : v.check({ email: v.email(f.email), password: v.password(f.password) })
+    setFieldErr(errs)
+    return Object.keys(errs).length === 0
+  }
+
   const next = async (e: FormEvent) => {
     e.preventDefault()
+    if (!validateStep(step)) return
     if (step < 2) { setStep(step + 1); return }
     if (busy) return
     setErr(null); setBusy(true)
@@ -217,14 +247,14 @@ function EmployerRegister() {
       <Stepper step={step} total={2} />
       <form onSubmit={next} className="space-y-4">
         {step === 1 && (<>
-          <Field label="Organisation Name" value={f.org} onChange={set('org')} />
-          <Field label="Contact Person" value={f.contact} onChange={set('contact')} />
-          <Field label="Phone Number" type="tel" value={f.phone} onChange={set('phone')} />
-          <Select label="Region" options={REGIONS} value={f.region} onChange={set('region')} />
+          <Field label="Organisation Name" value={f.org} onChange={set('org')} error={fieldErr.org} />
+          <Field label="Contact Person" value={f.contact} onChange={set('contact')} error={fieldErr.contact} />
+          <Field label="Phone Number" type="tel" placeholder="0241234567" value={f.phone} onChange={set('phone')} error={fieldErr.phone} />
+          <Select label="Region" options={REGIONS} placeholder="Select a region" value={f.region} onChange={set('region')} error={fieldErr.region} />
         </>)}
         {step === 2 && (<>
-          <Field label="Email Address" type="email" value={f.email} onChange={set('email')} />
-          <Field label="Password" type="password" value={f.password} onChange={set('password')} />
+          <Field label="Email Address" type="email" placeholder="you@company.com" value={f.email} onChange={set('email')} error={fieldErr.email} />
+          <Field label="Password" type="password" placeholder="At least 8 characters" value={f.password} onChange={set('password')} error={fieldErr.password} />
         </>)}
         <FormError message={err} />
         <div className="mt-5 flex items-center gap-3">
@@ -246,14 +276,41 @@ function EmployerRegister() {
 function WorkerRegister() {
   const { open } = useAuth()
   const [step, setStep] = useState(1)
-  const [f, setF] = useState({ name: '', phone: '', facility: FACILITIES[0], gName: '', gPhone: '', relationship: RELATIONSHIPS[0], pin: '' })
+  const [f, setF] = useState({ name: '', phone: '', facility: '', gName: '', gPhone: '', relationship: '', pin: '' })
+  const [fieldErr, setFieldErr] = useState<Record<string, string>>({})
   const [skills, setSkills] = useState<string[]>([])
   const set = (k: keyof typeof f) => (v: string) => setF({ ...f, [k]: v })
   const toggleSkill = (s: string) => setSkills((c) => (c.includes(s) ? c.filter((x) => x !== s) : [...c, s]))
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const validateStep = (n: number) => {
+    if (n === 1) {
+      const errs = v.check({ name: v.fullName(f.name), phone: v.phone(f.phone) })
+      setFieldErr(errs)
+      return Object.keys(errs).length === 0
+    }
+    if (n === 2) {
+      setFieldErr({})
+      if (!skills.length) { setErr('Select at least one skill so employers know what you can do.'); return false }
+      setErr(null)
+      return true
+    }
+    const errs = v.check({
+      gName: v.fullName(f.gName),
+      gPhone: v.phone(f.gPhone),
+      relationship: v.required('Relationship to guarantor')(f.relationship),
+      pin: v.pin(f.pin),
+    })
+    if (!errs.gPhone && f.gPhone.replace(/[\s-]/g, '') === f.phone.replace(/[\s-]/g, '')) {
+      errs.gPhone = 'Your guarantor must have a different number from yours.'
+    }
+    setFieldErr(errs)
+    return Object.keys(errs).length === 0
+  }
+
   const next = async (e: FormEvent) => {
     e.preventDefault()
+    if (!validateStep(step)) return
     if (step < 3) { setStep(step + 1); return }
     if (busy) return
     setErr(null); setBusy(true)
@@ -294,9 +351,9 @@ function WorkerRegister() {
       <Stepper step={step} total={3} />
       <form onSubmit={next} className="space-y-4">
         {step === 1 && (<>
-          <Field label="Full Name" value={f.name} onChange={set('name')} />
-          <Field label="Phone Number" type="tel" value={f.phone} onChange={set('phone')} />
-          <Select label="Prison Facility (optional)" options={FACILITIES} value={f.facility} onChange={set('facility')} />
+          <Field label="Full Name" value={f.name} onChange={set('name')} error={fieldErr.name} />
+          <Field label="Phone Number" type="tel" placeholder="0241234567" value={f.phone} onChange={set('phone')} error={fieldErr.phone} />
+          <Select label="Prison Facility (optional)" options={FACILITIES} placeholder="Not applicable" value={f.facility} onChange={set('facility')} />
         </>)}
         {step === 2 && (
           <div>
@@ -315,10 +372,10 @@ function WorkerRegister() {
           </div>
         )}
         {step === 3 && (<>
-          <Field label="Guarantor Full Name" value={f.gName} onChange={set('gName')} />
-          <Field label="Guarantor Phone Number" type="tel" value={f.gPhone} onChange={set('gPhone')} />
-          <Select label="Relationship to Guarantor" options={RELATIONSHIPS} value={f.relationship} onChange={set('relationship')} />
-          <Field label="PIN (4 digits)" type="password" inputMode="numeric" maxLength={4} placeholder="••••" value={f.pin} onChange={set('pin')} />
+          <Field label="Guarantor Full Name" value={f.gName} onChange={set('gName')} error={fieldErr.gName} />
+          <Field label="Guarantor Phone Number" type="tel" placeholder="0241234567" value={f.gPhone} onChange={set('gPhone')} error={fieldErr.gPhone} />
+          <Select label="Relationship to Guarantor" options={RELATIONSHIPS} placeholder="Select a relationship" value={f.relationship} onChange={set('relationship')} error={fieldErr.relationship} />
+          <Field label="PIN (4 digits)" type="password" inputMode="numeric" maxLength={4} placeholder="••••" value={f.pin} onChange={set('pin')} error={fieldErr.pin} />
         </>)}
         <FormError message={err} />
         <div className="mt-5 flex items-center gap-3">

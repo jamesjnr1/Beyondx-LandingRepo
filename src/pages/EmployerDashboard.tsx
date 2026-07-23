@@ -22,6 +22,12 @@ const STATUS: Record<string, { label: string; dot: string; chip: string; note?: 
 }
 const st = (s?: string) => STATUS[s || 'open'] || STATUS.open
 
+const PAYMENT_METHODS = [
+  { id: 'MTN MoMo', logo: '/payment/mtn-momo.png', alt: 'MTN Mobile Money' },
+  { id: 'Telecel Cash', logo: '/payment/telecel-cash.png', alt: 'Telecel Cash' },
+  { id: 'AirtelTigo Money', logo: '/payment/airteltigo-money.png', alt: 'AirtelTigo Money' },
+]
+
 // Dispatch writes "Worker: <name> (<id>) | Payment Ref: <ref>" into the description.
 function dispatchDetails(t: Task) {
   const d = String(t.description || '')
@@ -132,7 +138,7 @@ export default function EmployerDashboard() {
 
   return (
     <div className="min-h-screen bg-cream-100">
-      <DashboardHeader role="EMPLOYER" title="Employer Dashboard" name={orgName} avatar={logo} onEditProfile={() => setEditing(true)} />
+      <DashboardHeader role="EMPLOYER" title="Employer Dashboard" name={orgName} avatar={logo} onEditProfile={() => setEditing(true)} tasks={taskList} />
       <main id="main" className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-8">
         <p aria-live="polite" className="sr-only">{announce}</p>
 
@@ -369,15 +375,16 @@ function DispatchModal({ worker, onClose, onDone, onError }: { worker: Worker; o
   const [location, setLocation] = useState('')
   const [taskType, setTaskType] = useState(wSkills(worker)[0] || 'General Task')
   const [payRef, setPayRef] = useState('')
+  const [method, setMethod] = useState('')
   const [busy, setBusy] = useState(false)
   const pay = wCharge(worker) * days
   const duration = days === 0.5 ? 'Half Day' : days === 1 ? '1 Day' : `${days} Days`
 
   const submit = async () => {
-    if (!payRef.trim() || busy) return
+    if (!payRef.trim() || !method || busy) return
     setBusy(true)
     try {
-      await tasksApi.dispatch({ worker, taskType, location, duration, pay, paymentRef: payRef.trim() })
+      await tasksApi.dispatch({ worker, taskType, location, duration, pay, paymentRef: `${method} ${payRef.trim()}` })
       onDone()
     } catch (e) {
       onError(e instanceof ApiError ? e.message : 'Please try again.')
@@ -416,12 +423,31 @@ function DispatchModal({ worker, onClose, onDone, onError }: { worker: Worker; o
           <span className="font-serif text-lg font-semibold text-ink-900">{cedis(pay)}</span>
         </div>
 
+        <div className="mt-4">
+          <span className="mb-2 block text-xs font-medium text-ink-700">How did you pay?</span>
+          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Payment method">
+            {PAYMENT_METHODS.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                role="radio"
+                aria-checked={method === m.id}
+                aria-label={m.alt}
+                onClick={() => setMethod(m.id)}
+                className={`flex h-16 items-center justify-center rounded-xl border bg-white p-2 transition-all ${method === m.id ? 'border-forest-600 ring-2 ring-forest-600/30' : 'border-ink-900/15 hover:border-forest-500/50'}`}
+              >
+                <img src={m.logo} alt={m.alt} className="max-h-9 w-auto object-contain" />
+              </button>
+            ))}
+          </div>
+        </div>
+
         <label className="mt-4 block">
           <span className="mb-1 block text-xs font-medium text-ink-700">Payment reference / transaction ID</span>
           <input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder="e.g. 1234567890" className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
         </label>
 
-        <button onClick={submit} disabled={!payRef.trim() || busy} className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
+        <button onClick={submit} disabled={!payRef.trim() || !method || busy} className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
           <ShieldCheck size={16} aria-hidden="true" /> {busy ? 'Dispatching…' : 'Confirm & dispatch'}
         </button>
         <p className="mt-2 text-center text-xs text-ink-700">The worker is notified once your payment reference is recorded.</p>

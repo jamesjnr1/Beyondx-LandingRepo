@@ -1,15 +1,18 @@
 import { LogOut, UserRound } from 'lucide-react'
 import Logo from '../components/Logo'
 import { useAuth } from '../components/auth/AuthContext'
+import Notifications from '../components/Notifications'
+import type { Task } from '../lib/api'
 
 export default function DashboardHeader({
-  role, title, name, avatar, onEditProfile,
+  role, title, name, avatar, onEditProfile, tasks = [],
 }: {
   role: 'WORKER' | 'EMPLOYER'
   title: string
   name?: string
   avatar?: string
   onEditProfile?: () => void
+  tasks?: Task[]
 }) {
   const { go, logout } = useAuth()
   return (
@@ -27,6 +30,7 @@ export default function DashboardHeader({
           <span className="hidden rounded-full bg-forest-600/10 px-3 py-1 text-xs font-semibold tracking-wide text-forest-700 lg:inline">
             {role} · VERIFIED
           </span>
+          <Notifications role={role === 'WORKER' ? 'worker' : 'employer'} tasks={tasks} />
           {onEditProfile && (
             <button onClick={onEditProfile} aria-label="Edit your profile"
               className="flex items-center gap-2 rounded-full border border-ink-900/15 py-1 pl-1 pr-1 text-sm font-medium text-ink-800 transition-colors hover:bg-ink-900/5 active:scale-[0.98] sm:pr-3.5">

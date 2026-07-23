@@ -185,6 +185,8 @@ tr:hover td{background:var(--bg);}
       <div class="sb-grp">History</div>
       <div class="sb-a" onclick="nav('history',this)">Work History</div>
       <div class="sb-a" onclick="nav('transactions',this)">Transactions</div>
+      <div class="sb-grp">Payments</div>
+      <div class="sb-a" onclick="nav('payconfirm',this)">Payment Confirmations</div>
       <div class="sb-grp">Messages</div>
       <div class="sb-a" onclick="nav('messages',this)">SMS Log <span class="sb-bdg" id="smsBadge" style="display:none;background:#dc2626;">!</span></div>
     </div>
@@ -227,6 +229,44 @@ tr:hover td{background:var(--bg);}
       <div class="sec" id="sec-transactions"><div id="txContent"></div></div>
       <div class="sec" id="sec-messages"><div id="messagesContent"></div></div>
       <div class="sec" id="sec-employers"><input class="srch" id="eSearch" placeholder="Search employers by organisation or phone…" oninput="eSearchInput()"/><div class="tc"><div class="tc-h"><span class="tc-ht">Employers</span><span class="tc-hm" id="ec"></span></div><table><thead><tr><th>Organisation</th><th>Phone</th><th>Tasks</th><th>Completed</th><th>Total Spent</th></tr></thead><tbody id="et"></tbody></table><div id="etMore"></div></div></div>
+      <div class="sec" id="sec-payconfirm">
+        <div class="an-note">
+          Use this once BeyondX has received an employer's dispatch payment. It sends them an SMS confirming the money arrived and that the worker has been notified.
+        </div>
+        <div class="tc" style="margin-bottom:16px;">
+          <div class="tc-h"><span class="tc-ht">Confirm a payment</span><span class="tc-hm">Sends an SMS to the employer</span></div>
+          <div style="padding:16px;">
+            <div class="fld" style="margin-bottom:12px;">
+              <label style="display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;">Employer</label>
+              <select id="pcEmployer" onchange="pcPreview()" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px;font-family:inherit;background:#fff;">
+                <option value="">Select an employer…</option>
+              </select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+              <div class="fld">
+                <label style="display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;">Amount received (GHS)</label>
+                <input id="pcAmount" type="number" step="0.01" placeholder="e.g. 100" oninput="pcPreview()" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px;font-family:inherit;">
+              </div>
+              <div class="fld">
+                <label style="display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;">Payment reference</label>
+                <input id="pcRef" placeholder="e.g. MTN MoMo 1234567890" oninput="pcPreview()" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px;font-family:inherit;">
+              </div>
+            </div>
+            <div class="fld" style="margin-bottom:12px;">
+              <label style="display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;">Message to send</label>
+              <textarea id="pcMessage" rows="4" oninput="pcDirty=true" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
+              <div class="tb-t" style="margin-top:6px;">Edit freely — changing the fields above will stop overwriting your text.</div>
+            </div>
+            <button class="btn-r" onclick="pcReset()">Reset message</button>
+            <button class="btn-r on" style="margin-left:8px;" onclick="pcSend()">Send confirmation</button>
+          </div>
+        </div>
+        <div class="tc">
+          <div class="tc-h"><span class="tc-ht">Recently confirmed</span><span class="tc-hm">This session</span></div>
+          <div id="pcLog"></div>
+        </div>
+      </div>
+
       <div class="sec" id="sec-analytics">
         <div id="anAlert"></div>
         <div class="an-ctl">
@@ -333,8 +373,9 @@ function nav(id,el){
   document.querySelectorAll('.sb-a').forEach(n=>n.classList.remove('on'));
   document.getElementById('sec-'+id).classList.add('on');
   el.classList.add('on');
-  const T={overview:'Overview',payouts:'Pay Now',active:'In Progress',open:'Open Tasks',completed:'Completed Tasks',all:'All Tasks',workers:'Workers',employers:'Employers',history:'Work History',transactions:'Transactions',messages:'SMS Log',analytics:'Site Analytics'};
+  const T={overview:'Overview',payouts:'Pay Now',active:'In Progress',open:'Open Tasks',completed:'Completed Tasks',all:'All Tasks',workers:'Workers',employers:'Employers',history:'Work History',transactions:'Transactions',messages:'SMS Log',analytics:'Site Analytics',payconfirm:'Payment Confirmations'};
   document.getElementById('pageTitle').textContent=T[id]||id;
+  if(id==='payconfirm'){ pcEmployerList().then(pcPreview); pcRenderLog(); return; }
   if(id==='analytics'){if(!anData)loadAnalytics();return;}
   if(id!=='overview')rs(id);
 }
@@ -802,6 +843,88 @@ function loadAnalytics(){
       anEmptyAll('Not available');
     })
     .finally(()=>{ anLoading=false; });
+}
+
+
+/* =================== PAYMENT CONFIRMATIONS =================== */
+let pcDirty = false;
+const pcSentLog = [];
+
+async function pcEmployerList(){
+  const sel = document.getElementById('pcEmployer');
+  if(!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Loading employers…</option>';
+  try{
+    const d = await fetch(API+'/admin/employers',{headers:{'x-admin-password':pass}}).then(r=>r.json());
+    const withPhones = (d.employers||[]).filter(e=>e.phone);
+    sel.innerHTML = '<option value="">Select an employer…</option>' +
+      withPhones.map(e=>{
+        const nm = e.orgName||e.contactPerson||'Employer';
+        return `<option value="${anEsc(e.phone)}" data-name="${anEsc(nm)}">${anEsc(nm)} — ${anEsc(e.phone)}</option>`;
+      }).join('');
+    if(!withPhones.length){
+      sel.innerHTML = '<option value="">No employers with a phone number yet</option>';
+    }
+    sel.value = current;
+  }catch(e){
+    sel.innerHTML = '<option value="">Could not load employers</option>';
+    showToast('Could not load the employer list.');
+  }
+}
+
+function pcPreview(){
+  if(pcDirty) return;
+  const sel = document.getElementById('pcEmployer');
+  const opt = sel.options[sel.selectedIndex];
+  const org = opt && opt.dataset ? (opt.dataset.name||'') : '';
+  const amt = document.getElementById('pcAmount').value;
+  const ref = document.getElementById('pcRef').value.trim();
+  const parts = [];
+  parts.push(org ? `Hello ${org},` : 'Hello,');
+  parts.push(amt ? `BeyondX has received your payment of GHS ${Number(amt).toFixed(2)}.` : 'BeyondX has received your payment.');
+  if(ref) parts.push(`Reference: ${ref}.`);
+  parts.push('Your worker has been notified and will be dispatched shortly. Thank you for hiring through BeyondX.');
+  document.getElementById('pcMessage').value = parts.join(' ');
+}
+
+function pcReset(){ pcDirty=false; pcPreview(); }
+
+async function pcSend(){
+  const sel = document.getElementById('pcEmployer');
+  const phone = sel.value;
+  const message = document.getElementById('pcMessage').value.trim();
+  if(!phone){ showToast('Choose an employer first.'); return; }
+  if(!message){ showToast('The message is empty.'); return; }
+  const opt = sel.options[sel.selectedIndex];
+  const org = opt && opt.dataset ? (opt.dataset.name||phone) : phone;
+  if(!confirm(`Send this payment confirmation to ${org} (${phone})?`)) return;
+  showToast('Sending…');
+  try{
+    const r = await fetch(API+'/admin/send-sms',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-password':pass},
+      body:JSON.stringify({phone, message})
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    showToast('Payment confirmation sent to '+org+'.');
+    pcSentLog.unshift({org, phone, at:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})});
+    pcRenderLog();
+    pcDirty=false;
+    document.getElementById('pcAmount').value='';
+    document.getElementById('pcRef').value='';
+    pcPreview();
+  }catch(e){
+    showToast('Could not send: '+e.message);
+  }
+}
+
+function pcRenderLog(){
+  const el = document.getElementById('pcLog');
+  if(!el) return;
+  el.innerHTML = pcSentLog.length
+    ? pcSentLog.map(x=>`<div class="trow" style="display:flex;justify-content:space-between;padding:12px 16px;"><span class="tn">${anEsc(x.org)}</span><span class="tm">${anEsc(x.phone)} · ${anEsc(x.at)}</span></div>`).join('')
+    : '<div class="empty">No confirmations sent in this session.</div>';
 }
 
 </script>
