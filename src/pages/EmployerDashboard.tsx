@@ -3,7 +3,7 @@ import { ChevronRight, Star, Send, Phone, Plus, X, ShieldCheck, CircleCheck, Inf
 import DashboardHeader from './DashboardHeader'
 import ProfileModal from '../components/ProfileModal'
 import Toast, { type ToastMsg } from '../components/Toast'
-import { tasks as tasksApi, workers as workersApi, employers as employersApi, session, ApiError, type Task, type Worker, type Employer } from '../lib/api'
+import { tasks as tasksApi, workers as workersApi, employers as employersApi, contact, session, ApiError, type Task, type Worker, type Employer } from '../lib/api'
 
 const cedis = (n?: number | string) => `GH\u20b5 ${Number(n || 0).toLocaleString()}`
 const wName = (w: Worker) => (w.fullName as string) || (w.name as string) || 'Worker'
@@ -20,6 +20,18 @@ const STATUS: Record<string, { label: string; dot: string; chip: string; note?: 
   completed: { label: 'Payment released', dot: 'bg-forest-600', chip: 'bg-forest-600/15 text-forest-800', note: 'BeyondX released the payment to the worker.' },
 }
 const st = (s?: string) => STATUS[s || 'open'] || STATUS.open
+
+// Dispatch writes "Worker: <name> (<id>) | Payment Ref: <ref>" into the description.
+function dispatchDetails(t: Task) {
+  const d = String(t.description || '')
+  const worker = d.match(/Worker:\s*([^(|]+?)\s*\(([^)]+)\)/)
+  const ref = d.match(/Payment Ref:\s*([^|]+)/)
+  return {
+    workerName: worker?.[1]?.trim() || '',
+    workerId: worker?.[2]?.trim() || '',
+    paymentRef: ref?.[1]?.trim() || '',
+  }
+}
 
 function Stars({ n }: { n: number }) {
   return <span className="inline-flex" role="img" aria-label={`${n} out of 5 stars`}>{[1, 2, 3, 4, 5].map((i) => <Star key={i} size={14} aria-hidden="true" className={i <= n ? 'fill-forest-600 text-forest-600' : 'text-ink-900/20'} />)}</span>
@@ -413,6 +425,32 @@ function RateModal({ task, onClose, onDone, onError }: { task: Task; onClose: ()
     try {
       await tasksApi.complete(task.id)
       await tasksApi.review(task.id, stars, comment).catch(() => null)
+
+      // Tell BeyondX that payment is now due to the worker. Never block the
+      // confirmation itself if the notification fails.
+      const emp = session.employer()
+      const { workerName, workerId, paymentRef } = dispatchDetails(task)
+      const orgName = (emp?.orgName as string) || 'An employer'
+      contact
+        .send({
+          name: orgName,
+          email: (emp?.email as string) || undefined,
+          phone: (emp?.phone as string) || undefined,
+          message:
+            `${orgName} confirmed the work is complete. Payment is now due to the worker.\n\n` +
+            `Worker: ${workerName || worker}${workerId ? ` (${workerId})` : ''}\n` +
+            `Task: ${task.taskType || '—'}\n` +
+            `Location: ${task.location || '—'}\n` +
+            `Duration: ${task.duration || '—'}\n` +
+            `Task amount: GHS ${Number(task.pay || 0).toFixed(2)}\n` +
+            (paymentRef ? `Employer payment ref: ${paymentRef}\n` : '') +
+            `Employer rating: ${stars}/5\n` +
+            (comment.trim() ? `Employer feedback: ${comment.trim()}\n` : '') +
+            `\nRelease the worker's payment to complete this job.`,
+          category: 'payment_due',
+        })
+        .catch(() => null)
+
       onDone(worker)
     } catch (e) {
       onError(e instanceof ApiError ? e.message : 'Please try again.')

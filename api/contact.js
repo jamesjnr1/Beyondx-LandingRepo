@@ -66,7 +66,9 @@ export default async function handler(req, res) {
     ? '👋 New Worker Onboarding — BeyondX'
     : category === 'employer_onboarding'
       ? '👋 New Employer Onboarding — BeyondX'
-      : 'New contact request — BeyondX'
+      : category === 'payment_due'
+        ? '💸 Payment Due — BeyondX'
+        : 'New contact request — BeyondX'
 
   const subject = label
 
