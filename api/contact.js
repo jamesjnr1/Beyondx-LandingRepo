@@ -44,6 +44,9 @@ async function storeMessage(row) {
   if (!r.ok) console.error('[contact] archive failed', r.status, (await r.text()).slice(0, 200))
 }
 
+const SITE = process.env.SITE_URL || 'https://www.beyondxco.com'
+const SUPPORT_ICON = `${SITE}/icons/support-email.png`
+
 const DEFAULT_TO = 'beyondx26@gmail.com'
 const DEFAULT_FROM = 'BeyondX <onboarding@resend.dev>'
 
@@ -123,9 +126,16 @@ export default async function handler(req, res) {
     ? 'No email on file — use the phone number above to follow up.'
     : ''
 
+  // Support and report emails lead with the support icon. Remote images are
+  // often blocked, so the heading still carries the meaning on its own.
+  const isSupport = ['worker_support', 'employer_support', 'worker_report', 'employer_report'].includes(category)
+  const iconHtml = isSupport
+    ? `<img src="${SUPPORT_ICON}" width="34" height="34" alt="" style="vertical-align:middle;margin-right:10px;border:0;outline:none;">`
+    : ''
+
   const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif;color:#12180E;line-height:1.6;font-size:15px;">
-      <h2 style="margin:0 0 20px;color:#6BAB21;font-size:22px;line-height:1.3;">${escapeHtml(label)}</h2>
+      <h2 style="margin:0 0 20px;color:#6BAB21;font-size:22px;line-height:1.3;">${iconHtml}${escapeHtml(label)}</h2>
       ${fieldHtml}
       <p style="margin:0 0 6px;"><strong>Message:</strong></p>
       <div style="white-space:pre-wrap;">${escapeHtml(message)}</div>

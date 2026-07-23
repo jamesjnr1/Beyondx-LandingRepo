@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LifeBuoy, Phone, Send } from 'lucide-react'
+import { Phone, Send } from 'lucide-react'
 import { contact, session, ApiError } from '../lib/api'
 
 const SUPPORT_PHONE = '0553608309'
@@ -73,12 +73,25 @@ export default function SupportPanel({
 
   return (
     <div className="mx-auto mt-6 max-w-xl rounded-2xl bg-cream-50 p-6 shadow-sm ring-1 ring-ink-900/5">
-      <h2 className="flex items-center gap-2 font-serif text-xl font-medium text-ink-900">
-        <LifeBuoy size={19} aria-hidden="true" className="text-forest-600" /> Support &amp; Reporting
-      </h2>
-      <p className="mt-1 text-sm leading-relaxed text-ink-700">
-        Need help, or need to report a problem with {reporting}? Send us a message directly and our team will follow up.
-      </p>
+      <div className="flex items-start gap-4">
+        <img
+          src="/icons/support.png"
+          alt=""
+          width={52}
+          height={52}
+          className="hidden h-13 w-13 shrink-0 object-contain sm:block"
+          style={{ width: 52, height: 52 }}
+        />
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 font-serif text-xl font-medium text-ink-900">
+            <img src="/icons/support.png" alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain sm:hidden" />
+            Support &amp; Reporting
+          </h2>
+          <p className="mt-1 text-sm leading-relaxed text-ink-700">
+            Need help, or need to report a problem with {reporting}? Send us a message directly and our team will follow up.
+          </p>
+        </div>
+      </div>
 
       <label className="mt-5 block">
         <span className="mb-1.5 block text-sm font-medium text-ink-800">What&rsquo;s this about?</span>
