@@ -90,15 +90,31 @@ export default async function handler(req, res) {
 
     if (!r.ok) {
       const detail = await r.text()
-      console.error('[upload] failed', r.status, detail.slice(0, 300))
-      const missingBucket = r.status === 404 || detail.includes('Bucket not found')
-      return res.status(502).json({
-        error: missingBucket
-          ? `The "${bucket}" storage bucket does not exist in Supabase yet.`
-          : `Upload failed (${r.status}).`,
-        missingBucket: missingBucket || undefined,
-        reason: (() => { try { return JSON.parse(detail).message } catch { return detail.slice(0, 200) } })(),
-      })
+      console.error('[upload] failed', r.status, 'bucket:', bucket, 'path:', path, detail.slice(0, 400))
+
+      let reason = ''
+      try {
+        const parsed = JSON.parse(detail)
+        reason = parsed.message || parsed.error || ''
+      } catch {
+        reason = detail.slice(0, 200)
+      }
+
+      // Match on Supabase's own wording — each of these needs a different fix.
+      const missingBucket = /bucket not found/i.test(detail)
+      const rls = /row-level security|violates.*policy/i.test(detail)
+      const badKey = /\bjwt\b|signature|invalid token|not authenticated/i.test(detail)
+
+      // Include the provider's own words — a bare status code is undiagnosable.
+      const error = missingBucket
+        ? `The "${bucket}" storage bucket was not found. Create a public bucket named "${bucket}" in Supabase → Storage.`
+        : rls
+          ? `Supabase blocked the write to "${bucket}". Make sure SUPABASE_SERVICE_KEY is the service_role key (not the anon key), then redeploy.`
+          : badKey
+            ? 'Supabase rejected the key. Check SUPABASE_SERVICE_KEY is correct, then redeploy.'
+            : `Upload failed (${r.status})${reason ? `: ${reason}` : ''}`
+
+      return res.status(502).json({ error, reason: reason || undefined, bucket, missingBucket: missingBucket || undefined })
     }
 
     return res.status(200).json({
