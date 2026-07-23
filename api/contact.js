@@ -63,36 +63,42 @@ export default async function handler(req, res) {
   }
 
   const label = category === 'worker_onboarding'
-    ? 'New worker signup'
+    ? '👋 New Worker Onboarding — BeyondX'
     : category === 'employer_onboarding'
-      ? 'New employer signup'
-      : 'Website enquiry'
+      ? '👋 New Employer Onboarding — BeyondX'
+      : '✉️ New Website Enquiry — BeyondX'
 
-  const subject = `${label}${name ? ` — ${name}` : ''}`
+  const subject = label
 
-  const lines = [
-    ['Type', category || 'contact'],
+  const rows = [
     ['Name', name],
     ['Email', email],
     ['Phone', phone],
   ].filter(([, v]) => v)
 
+  const fieldHtml = rows.map(([k, v]) => {
+    const value = k === 'Email'
+      ? `<a href="mailto:${escapeHtml(v)}" style="color:#1a73e8;">${escapeHtml(v)}</a>`
+      : k === 'Phone'
+        ? `<a href="tel:${escapeHtml(v)}" style="color:#1a73e8;">${escapeHtml(v)}</a>`
+        : escapeHtml(v)
+    return `<p style="margin:0 0 14px;"><strong>${escapeHtml(k)}:</strong> ${value}</p>`
+  }).join('')
+
   const html = `
-    <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#12180E;line-height:1.6;">
-      <h2 style="margin:0 0 12px;color:#6BAB21;">${escapeHtml(label)}</h2>
-      <table style="border-collapse:collapse;margin-bottom:16px;">
-        ${lines.map(([k, v]) => `<tr>
-          <td style="padding:4px 14px 4px 0;color:#6b7280;font-size:13px;">${escapeHtml(k)}</td>
-          <td style="padding:4px 0;font-size:13px;font-weight:600;">${escapeHtml(v)}</td>
-        </tr>`).join('')}
-      </table>
-      <pre style="white-space:pre-wrap;font-family:inherit;font-size:14px;background:#f6f7f4;padding:14px;border-radius:8px;margin:0;">${escapeHtml(message)}</pre>
+    <div style="font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif;color:#12180E;line-height:1.6;font-size:15px;">
+      <h2 style="margin:0 0 20px;color:#6BAB21;font-size:22px;line-height:1.3;">${escapeHtml(label)}</h2>
+      ${fieldHtml}
+      <p style="margin:0 0 6px;"><strong>Message:</strong></p>
+      <div style="white-space:pre-wrap;">${escapeHtml(message)}</div>
     </div>`
 
   const text = [
     label,
-    ...lines.map(([k, v]) => `${k}: ${v}`),
     '',
+    ...rows.map(([k, v]) => `${k}: ${v}`),
+    '',
+    'Message:',
     message,
   ].join('\n')
 
