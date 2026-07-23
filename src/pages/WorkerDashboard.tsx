@@ -5,7 +5,9 @@ import ReferralCard from '../components/ReferralCard'
 import ProfileModal, { type Profile } from '../components/ProfileModal'
 import Toast, { type ToastMsg } from '../components/Toast'
 import SupportPanel from '../components/SupportPanel'
+import LocationShare from '../components/LocationShare'
 import { tasks as tasksApi, workers as workersApi, contact, session, ApiError, type Task, type Worker } from '../lib/api'
+import { isRemote } from '../data'
 
 const cedis = (n?: number | string) => `GH\u20b5 ${Number(n || 0).toLocaleString()}`
 
@@ -265,16 +267,26 @@ export default function WorkerDashboard() {
                     </p>
                   )}
                   {mine.length ? mine.map((t) => (
-                    <TaskCard key={t.id} task={t}>
-                      {t.status === 'pending_confirmation' ? (
-                        <span className="rounded-full bg-ink-900/10 px-3 py-1.5 text-xs font-semibold text-ink-700">Awaiting employer confirmation</span>
-                      ) : (
-                        <button onClick={() => markDone(t)} disabled={busyId === t.id} aria-label={`Mark ${t.taskType || 'task'} complete`}
-                          className="shrink-0 rounded-full bg-forest-600 px-4 py-2 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60">
-                          {busyId === t.id ? 'Working…' : 'Mark Complete'}
-                        </button>
-                      )}
-                    </TaskCard>
+                    <div key={t.id}>
+                      <TaskCard task={t}>
+                        {t.status === 'pending_confirmation' ? (
+                          <span className="rounded-full bg-ink-900/10 px-3 py-1.5 text-xs font-semibold text-ink-700">Awaiting employer confirmation</span>
+                        ) : (
+                          <button onClick={() => markDone(t)} disabled={busyId === t.id} aria-label={`Mark ${t.taskType || 'task'} complete`}
+                            className="shrink-0 rounded-full bg-forest-600 px-4 py-2 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60">
+                            {busyId === t.id ? 'Working…' : 'Mark Complete'}
+                          </button>
+                        )}
+                      </TaskCard>
+                      <div className="-mt-1 rounded-b-xl bg-cream-50 px-4 pb-4 shadow-sm ring-1 ring-ink-900/5 sm:px-5">
+                        <LocationShare
+                          taskId={t.id}
+                          workerId={(me?.workerId as string) || undefined}
+                          workerName={displayName}
+                          disabled={t.status === 'pending_confirmation' || isRemote(t.taskType || '')}
+                        />
+                      </div>
+                    </div>
                   )) : <Empty text="You haven't accepted any tasks yet." />}
                 </>
               )}
