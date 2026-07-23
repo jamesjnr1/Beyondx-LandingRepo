@@ -4,7 +4,7 @@ import DashboardHeader from './DashboardHeader'
 import ReferralCard from '../components/ReferralCard'
 import ProfileModal, { type Profile } from '../components/ProfileModal'
 import Toast, { type ToastMsg } from '../components/Toast'
-import { tasks as tasksApi, workers as workersApi, session, ApiError, type Task, type Worker } from '../lib/api'
+import { tasks as tasksApi, workers as workersApi, contact, session, ApiError, type Task, type Worker } from '../lib/api'
 
 const cedis = (n?: number | string) => `GH\u20b5 ${Number(n || 0).toLocaleString()}`
 
@@ -127,7 +127,31 @@ export default function WorkerDashboard() {
 
   const acceptOffer = (t: Task) => act(t, () => tasksApi.acceptOffer(t.id), 'Offer accepted', `${t.taskType || 'The task'} is now in My Tasks.`)
   const acceptOpen = (t: Task) => act(t, () => tasksApi.accept(t.id), 'Task accepted', `${t.taskType || 'The task'} is now in My Tasks.`)
-  const markDone = (t: Task) => act(t, () => tasksApi.workerDone(t.id), 'Marked complete', `${employerName(t)} will confirm, then BeyondX releases your payment.`)
+  const markDone = (t: Task) =>
+    act(
+      t,
+      async () => {
+        await tasksApi.workerDone(t.id)
+        // Notify BeyondX by email, as the main site does. Never let a failed
+        // notification look like the task itself failed.
+        const pay = Number(t.pay || 0).toFixed(2)
+        contact
+          .send({
+            name: displayName,
+            phone: (me?.phone as string) || undefined,
+            message:
+              `Worker ${displayName} (${(me?.workerId as string) || '—'}) marked a task as done.\n\n` +
+              `Task: ${t.taskType || '—'}\n` +
+              `Location: ${t.location || '—'}\n` +
+              `Employer: ${employerName(t)}\n` +
+              `Amount: GHS ${pay}`,
+            category: 'task_completed',
+          })
+          .catch(() => null)
+      },
+      'Marked complete',
+      `${employerName(t)} will confirm, then BeyondX releases your payment.`,
+    )
 
   const declineOffer = async (t: Task) => {
     if (busyId) return

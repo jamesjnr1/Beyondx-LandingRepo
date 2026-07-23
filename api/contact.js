@@ -66,7 +66,7 @@ export default async function handler(req, res) {
     ? '👋 New Worker Onboarding — BeyondX'
     : category === 'employer_onboarding'
       ? '👋 New Employer Onboarding — BeyondX'
-      : '✉️ New Website Enquiry — BeyondX'
+      : 'New contact request — BeyondX'
 
   const subject = label
 
@@ -85,12 +85,19 @@ export default async function handler(req, res) {
     return `<p style="margin:0 0 14px;"><strong>${escapeHtml(k)}:</strong> ${value}</p>`
   }).join('')
 
+  // Workers register with a phone number, not an email — say so plainly rather
+  // than leaving the reader wondering how to reach them.
+  const noEmailNote = !email && phone
+    ? 'No email on file — use the phone number above to follow up.'
+    : ''
+
   const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif;color:#12180E;line-height:1.6;font-size:15px;">
       <h2 style="margin:0 0 20px;color:#6BAB21;font-size:22px;line-height:1.3;">${escapeHtml(label)}</h2>
       ${fieldHtml}
       <p style="margin:0 0 6px;"><strong>Message:</strong></p>
       <div style="white-space:pre-wrap;">${escapeHtml(message)}</div>
+      ${noEmailNote ? `<p style="margin:20px 0 0;color:#6b7280;font-size:13px;">${escapeHtml(noEmailNote)}</p>` : ''}
     </div>`
 
   const text = [
@@ -100,6 +107,7 @@ export default async function handler(req, res) {
     '',
     'Message:',
     message,
+    ...(noEmailNote ? ['', noEmailNote] : []),
   ].join('\n')
 
   try {
