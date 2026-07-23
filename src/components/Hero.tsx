@@ -38,8 +38,8 @@ export default function Hero() {
               Reintegration Programme
             </p>
             <h1 className="font-serif text-5xl font-medium leading-[1.05] text-cream-50 text-balance sm:text-6xl lg:text-7xl">
-              Go Beyond.{' '}
-              <span className="italic gradient-text">Hire Purpose.</span>
+              Same Hands.
+              <span className="block italic gradient-text">New Start.</span>
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-cream-200/90 text-pretty">
               BeyondX connects Ghanaian employers with skilled, certified workers
