@@ -793,6 +793,9 @@ function loadAnalytics(){
           'Add api/analytics.js to the beyondxco project and redeploy. It will then live at /api/analytics.');
       }else if(String(err.message).includes('Missing environment')){
         anAlert('Analytics not configured yet', anEsc(err.message)+'. Add these in Vercel → Settings → Environment Variables, then redeploy.');
+      }else if(err.status===500){
+        anAlert('The analytics function crashed',
+          'It returned a 500 with no details, which usually means it failed to start rather than failed to fetch. Check the Vercel deployment log for this project (Deployments → latest → Functions → /api/analytics) for the real error.');
       }else{
         anAlert('Could not load site analytics', anEsc(err.message||'Unknown error'));
       }

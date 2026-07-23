@@ -9,7 +9,8 @@
 //   VERCEL_TEAM_ID      Only if the project sits under a team (optional for personal accounts)
 //   ADMIN_API_SECRET    Set this to your existing admin password
 //
-// CommonJS, matching api/contact.js in this project.
+// ESM: this project sets "type": "module" in package.json, so .js files
+// under /api must use `export default`, not module.exports.
 // Usage from the admin page:
 //   fetch('/api/analytics?days=14', { headers: { 'x-admin-secret': adminPassword } })
 
@@ -60,7 +61,7 @@ async function safe(label, fn) {
   }
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   problems.length = 0
   eventsUnavailable = null
 
