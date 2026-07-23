@@ -260,8 +260,11 @@ export default function EmployerDashboard() {
           onSave={async (p) => {
             setEditing(false)
             try {
-              await employersApi.updateProfile({ contactPerson: p.contact, phone: p.phone, region: p.region })
-              session.patchEmployer({ contactPerson: p.contact, phone: p.phone, region: p.region })
+              const logoUrl = p.avatar && /^https?:\/\//.test(p.avatar) ? p.avatar : undefined
+              const patch: Record<string, unknown> = { contactPerson: p.contact, phone: p.phone, region: p.region }
+              if (logoUrl && logoUrl !== profile?.logoUrl) patch.logoUrl = logoUrl
+              await employersApi.updateProfile(patch)
+              session.patchEmployer(patch)
               setToast({ id: Date.now(), kind: 'success', title: 'Profile updated', detail: 'Your organisation details are up to date.' })
               load()
             } catch (e) {

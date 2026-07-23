@@ -326,9 +326,13 @@ export default function WorkerDashboard() {
             setEditing(false)
             try {
               const skills = p.skills ? p.skills.split(',').map((x) => x.trim()).filter(Boolean) : []
-              await workersApi.updateMe({ skills })
-              session.patchWorker({ skills })
-              setMe((m) => ({ ...(m || {}), skills }))
+              // Only send the photo when it is a stored URL, never a local preview.
+              const photoUrl = p.avatar && /^https?:\/\//.test(p.avatar) ? p.avatar : undefined
+              const patch: Record<string, unknown> = { skills }
+              if (photoUrl && photoUrl !== me?.photoUrl) patch.photoUrl = photoUrl
+              await workersApi.updateMe(patch)
+              session.patchWorker(patch)
+              setMe((m) => ({ ...(m || {}), ...patch }))
               setToast({ id: Date.now(), kind: 'success', title: 'Profile updated', detail: 'Employers will now see your latest skills.' })
             } catch (e) {
               setToast({ id: Date.now(), kind: 'info', title: 'Could not save profile', detail: e instanceof ApiError ? e.message : 'Please try again.' })
