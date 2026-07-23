@@ -44,6 +44,11 @@ async function query(path, params) {
 // Any query that fails returns null rather than breaking the whole dashboard.
 const problems = []
 let eventsUnavailable = null
+let dimensionHint = null
+
+// Dimensions that may not exist on every plan or API version. If one is
+// rejected we hide that panel rather than reporting a fault.
+const OPTIONAL = new Set(['browsers'])
 
 async function safe(label, fn) {
   try {
@@ -56,6 +61,12 @@ async function safe(label, fn) {
       return null
     }
     console.error(`[analytics] ${label} failed:`, err.message)
+    if (OPTIONAL.has(label)) {
+      // Capture the API's list of valid dimensions so it is visible in the log.
+      const allowed = err.message.match(/allowed values ([^}]+)/)
+      if (allowed && !dimensionHint) dimensionHint = allowed[1].slice(0, 300)
+      return null
+    }
     problems.push(`${label}: ${err.message.slice(0, 160)}`)
     return null
   }
@@ -64,6 +75,7 @@ async function safe(label, fn) {
 export default async function handler(req, res) {
   problems.length = 0
   eventsUnavailable = null
+  dimensionHint = null
 
   // --- gate: keep this endpoint from being world-readable ---
   const secret = process.env.ADMIN_API_SECRET
@@ -84,7 +96,7 @@ export default async function handler(req, res) {
   // Previous period of the same length, for "vs last period" comparisons
   const prevRange = { since: daysAgo(days * 2), until: since }
 
-  const [totals, prevTotals, overTime, topPages, referrers, devices, countries, browsers, systems, events] =
+  const [totals, prevTotals, overTime, topPages, referrers, devices, countries, browsers, events] =
     await Promise.all([
       safe('totals', () => query('visits/count', range)),
       safe('prevTotals', () => query('visits/count', prevRange)),
@@ -93,8 +105,7 @@ export default async function handler(req, res) {
       safe('referrers', () => query('visits/aggregate', { ...range, by: 'referrerHostname', limit: 8 })),
       safe('devices', () => query('visits/aggregate', { ...range, by: 'deviceType', limit: 8 })),
       safe('countries', () => query('visits/aggregate', { ...range, by: 'country', limit: 8 })),
-      safe('browsers', () => query('visits/aggregate', { ...range, by: 'browser', limit: 8 })),
-      safe('systems', () => query('visits/aggregate', { ...range, by: 'os', limit: 8 })),
+      safe('browsers', () => query('visits/aggregate', { ...range, by: 'browserName', limit: 8 })),
       safe('events', () => query('events/aggregate', { ...range, by: 'eventName', limit: 20 })),
     ])
 
@@ -135,9 +146,9 @@ export default async function handler(req, res) {
     devices: devices?.data ?? [],
     countries: countries?.data ?? [],
     browsers: browsers?.data ?? [],
-    systems: systems?.data ?? [],
     events: eventRows,
     eventsUnavailable,
+    dimensionHint,
     problems,
     generatedAt: new Date().toISOString(),
   })

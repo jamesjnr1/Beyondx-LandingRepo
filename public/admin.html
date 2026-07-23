@@ -387,10 +387,7 @@ tr:hover td{background:var(--bg);}
           <div class="tc"><div class="tc-h"><span class="tc-ht">Countries</span><span class="tc-hm">Visitors</span></div><div id="anCountries"></div></div>
           <div class="tc"><div class="tc-h"><span class="tc-ht">Devices</span><span class="tc-hm">Visitors</span></div><div id="anDevices"></div></div>
         </div>
-        <div class="two">
-          <div class="tc"><div class="tc-h"><span class="tc-ht">Browsers</span><span class="tc-hm">Visitors</span></div><div id="anBrowsers"></div></div>
-          <div class="tc"><div class="tc-h"><span class="tc-ht">Operating Systems</span><span class="tc-hm">Visitors</span></div><div id="anSystems"></div></div>
-        </div>
+        <div class="tc"><div class="tc-h"><span class="tc-ht">Browsers</span><span class="tc-hm">Visitors</span></div><div id="anBrowsers"></div></div>
       </div>
     </div>
   </div>
@@ -846,7 +843,7 @@ function anAlert(title,msg){
 }
 
 function anEmptyAll(msg){
-  ['anPages','anRefs','anDevices','anCountries','anBrowsers','anSystems'].forEach(id=>{
+  ['anPages','anRefs','anDevices','anCountries','anBrowsers'].forEach(id=>{
     document.getElementById(id).innerHTML=`<div class="empty">${msg}</div>`;
   });
   document.getElementById('anEvents').innerHTML=`<tr><td colspan="3"><div class="empty">${msg}</div></td></tr>`;
@@ -855,6 +852,17 @@ function anEmptyAll(msg){
 }
 
 /* Bar list styled like the existing Top Categories block */
+// Browsers / operating systems are not available on every plan. Hide the whole
+// card when there is nothing to show rather than leaving an empty box.
+function anOptionalPanel(id, rows, key, kind){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const card = el.closest('.tc');
+  const has = Array.isArray(rows) && rows.length > 0;
+  if(card) card.style.display = has ? '' : 'none';
+  if(has) anBarList(el, rows, key, kind);
+}
+
 function anBarList(el,rows,preferredKey,kind){
   if(!rows||!rows.length){ el.innerHTML=`<div class="empty">No data yet</div>`; return; }
   const top=rows.slice().sort((a,b)=>anVisitors(b)-anVisitors(a)).slice(0,8);
@@ -912,8 +920,7 @@ function renderAnalytics(d){
   anBarList(document.getElementById('anRefs'),d.referrers,'referrerHostname','referrer');
   anBarList(document.getElementById('anDevices'),d.devices,'deviceType','device');
   anBarList(document.getElementById('anCountries'),d.countries,'country','country');
-  anBarList(document.getElementById('anBrowsers'),d.browsers,'browser','browser');
-  anBarList(document.getElementById('anSystems'),d.systems,'os','os');
+  anOptionalPanel('anBrowsers', d.browsers, 'browserName', 'browser');
 
   const ev=(d.events||[]).slice().sort((a,b)=>anCount(b)-anCount(a));
   if(ev.length){
