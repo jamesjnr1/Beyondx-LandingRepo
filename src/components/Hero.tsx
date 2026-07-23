@@ -11,12 +11,16 @@ export default function Hero() {
         transition={{ duration: 2, ease: 'easeOut' }}
         className="absolute inset-0"
       >
-        <img
-          src="/hero.jpg"
-          alt="A worker on a job site in Greater Accra holding a hard hat at sunset"
-          className="h-full w-full object-cover"
-          loading="eager"
-        />
+        <picture>
+          {/* Portrait crop for phones; the wider landscape shot from 640px up. */}
+          <source media="(max-width: 639px)" srcSet="/hero-mobile.jpg" />
+          <img
+            src="/hero.jpg"
+            alt="A BeyondX worker on a job site in Greater Accra"
+            className="h-full w-full object-cover"
+            loading="eager"
+          />
+        </picture>
       </motion.div>
 
       <div className="absolute inset-0 bg-gradient-to-t from-ink-950/80 via-ink-950/25 to-ink-950/40" />
@@ -38,10 +42,9 @@ export default function Hero() {
               <span className="italic gradient-text">Hire Purpose.</span>
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-cream-200/90 text-pretty">
-              Workers are fully vetted and selected based on their skills — not
-              hired out of charity. They bring the exact capabilities required to
-              complete your tasks effectively, while also offering a cost-efficient
-              solution.
+              BeyondX connects Ghanaian employers with skilled, certified workers
+              rebuilding their lives after incarceration — verified, ready to work,
+              and hired on merit.
             </p>
           </motion.div>
 

@@ -38,6 +38,21 @@ function load(): A11ySettings {
   }
 }
 
+const DM_SANS_ID = 'a11y-dm-sans'
+const DM_SANS_HREF =
+  'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap'
+
+// DM Sans is only needed when the easier-to-read setting is on, so it is fetched
+// on demand rather than added to every page load.
+function ensureDmSans() {
+  if (typeof document === 'undefined' || document.getElementById(DM_SANS_ID)) return
+  const link = document.createElement('link')
+  link.id = DM_SANS_ID
+  link.rel = 'stylesheet'
+  link.href = DM_SANS_HREF
+  document.head.appendChild(link)
+}
+
 export function AccessibilityProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<A11ySettings>(load)
 
@@ -47,6 +62,7 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
     root.classList.toggle('a11y-underline', settings.underlineLinks)
     root.classList.toggle('a11y-reduce-motion', settings.reduceMotion)
     root.classList.toggle('a11y-dyslexia', settings.dyslexiaFont)
+    if (settings.dyslexiaFont) ensureDmSans()
     root.classList.remove('a11y-text-large', 'a11y-text-xlarge')
     if (settings.textSize === 'large') root.classList.add('a11y-text-large')
     if (settings.textSize === 'xlarge') root.classList.add('a11y-text-xlarge')

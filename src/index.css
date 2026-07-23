@@ -63,10 +63,11 @@
 html.a11y-text-large { font-size: 118%; }
 html.a11y-text-xlarge { font-size: 134%; }
 
-/* Easier-to-read font: plainer typeface with looser spacing */
+/* Easier-to-read font: DM Sans (BeyondX brand face) with looser spacing.
+   The stylesheet is loaded on demand when this setting is switched on. */
 html.a11y-dyslexia body,
 html.a11y-dyslexia .font-serif {
-  font-family: Verdana, Tahoma, 'Trebuchet MS', sans-serif;
+  font-family: 'DM Sans', Verdana, Tahoma, sans-serif;
   letter-spacing: 0.02em;
   word-spacing: 0.08em;
   line-height: 1.75;
