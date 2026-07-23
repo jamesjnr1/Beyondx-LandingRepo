@@ -185,6 +185,11 @@ tr:hover td{background:var(--bg);}
 .an-ctl{display:flex;gap:8px;margin-bottom:16px;align-items:center;}
 .an-up{color:var(--forest-700);font-weight:600;}
 .an-dn{color:var(--red-700);font-weight:600;}
+.an-row{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:7px;overflow:hidden;margin-bottom:3px;}
+.an-row-bar{position:absolute;left:0;top:0;bottom:0;background:var(--forest-50);border-radius:7px;}
+.an-row-name{position:relative;font-size:12px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:7px;}
+.an-row-pct{position:relative;font-size:12px;font-weight:700;color:var(--ink2);font-family:var(--m);flex-shrink:0;}
+.an-flag{font-size:15px;line-height:1;}
 .an-note{background:var(--forest-50);border:1.5px solid var(--forest-100);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:11.5px;color:var(--ink2);line-height:1.6;}
 </style>
 </head>
@@ -374,13 +379,17 @@ tr:hover td{background:var(--bg);}
           <div class="bars" id="anBars"></div>
         </div>
         <div class="two">
-          <div class="tc"><div class="tc-h"><span class="tc-ht">Top Pages</span><span class="tc-hm">By views</span></div><div id="anPages"></div></div>
-          <div class="tc"><div class="tc-h"><span class="tc-ht">Where Visitors Come From</span><span class="tc-hm">Referrers</span></div><div id="anRefs"></div></div>
+          <div class="tc"><div class="tc-h"><span class="tc-ht">Top Pages</span><span class="tc-hm">Visitors</span></div><div id="anPages"></div></div>
+          <div class="tc"><div class="tc-h"><span class="tc-ht">Where Visitors Come From</span><span class="tc-hm">Visitors</span></div><div id="anRefs"></div></div>
         </div>
         <div class="tc"><div class="tc-h"><span class="tc-ht">Clicks &amp; Actions</span><span class="tc-hm">Tracked events</span></div><table><thead><tr><th>Action</th><th>Clicks</th><th>People</th></tr></thead><tbody id="anEvents"></tbody></table></div>
         <div class="two">
-          <div class="tc"><div class="tc-h"><span class="tc-ht">Devices</span></div><div id="anDevices"></div></div>
-          <div class="tc"><div class="tc-h"><span class="tc-ht">Countries</span></div><div id="anCountries"></div></div>
+          <div class="tc"><div class="tc-h"><span class="tc-ht">Countries</span><span class="tc-hm">Visitors</span></div><div id="anCountries"></div></div>
+          <div class="tc"><div class="tc-h"><span class="tc-ht">Devices</span><span class="tc-hm">Visitors</span></div><div id="anDevices"></div></div>
+        </div>
+        <div class="two">
+          <div class="tc"><div class="tc-h"><span class="tc-ht">Browsers</span><span class="tc-hm">Visitors</span></div><div id="anBrowsers"></div></div>
+          <div class="tc"><div class="tc-h"><span class="tc-ht">Operating Systems</span><span class="tc-hm">Visitors</span></div><div id="anSystems"></div></div>
         </div>
       </div>
     </div>
@@ -804,6 +813,23 @@ function anLabel(row,preferred){
   return '(none)';
 }
 function anCount(row){ const v=row.pageviews!=null?row.pageviews:(row.count!=null?row.count:(row.views!=null?row.views:0)); return Number(v)||0; }
+// Vercel's Top Pages / Referrers / Devices / Countries panels count VISITORS,
+// not page views — match that so the two dashboards agree.
+function anVisitors(row){ const v=row.visitors!=null?row.visitors:anCount(row); return Number(v)||0; }
+
+// ISO-3166 alpha-2 -> flag emoji
+function anFlag(code){
+  if(!/^[A-Za-z]{2}$/.test(code||'')) return '';
+  return String.fromCodePoint(...code.toUpperCase().split('').map(c=>127397+c.charCodeAt(0)));
+}
+let anRegionNames = null;
+function anCountryName(code){
+  if(!/^[A-Za-z]{2}$/.test(code||'')) return code||'(unknown)';
+  try{
+    anRegionNames = anRegionNames || new Intl.DisplayNames(['en'],{type:'region'});
+    return anRegionNames.of(code.toUpperCase()) || code.toUpperCase();
+  }catch(e){ return code.toUpperCase(); }
+}
 function anPeople(row){ return row.visitors!=null?Number(row.visitors):null; }
 function anNum(n){ return n==null?'—':Number(n).toLocaleString(); }
 
@@ -820,7 +846,7 @@ function anAlert(title,msg){
 }
 
 function anEmptyAll(msg){
-  ['anPages','anRefs','anDevices','anCountries'].forEach(id=>{
+  ['anPages','anRefs','anDevices','anCountries','anBrowsers','anSystems'].forEach(id=>{
     document.getElementById(id).innerHTML=`<div class="empty">${msg}</div>`;
   });
   document.getElementById('anEvents').innerHTML=`<tr><td colspan="3"><div class="empty">${msg}</div></td></tr>`;
@@ -829,16 +855,30 @@ function anEmptyAll(msg){
 }
 
 /* Bar list styled like the existing Top Categories block */
-function anBarList(el,rows,preferredKey){
+function anBarList(el,rows,preferredKey,kind){
   if(!rows||!rows.length){ el.innerHTML=`<div class="empty">No data yet</div>`; return; }
-  const top=rows.slice().sort((a,b)=>anCount(b)-anCount(a)).slice(0,8);
-  const max=Math.max(...top.map(anCount),1);
+  const top=rows.slice().sort((a,b)=>anVisitors(b)-anVisitors(a)).slice(0,8);
+  const total=top.reduce((sum,r)=>sum+anVisitors(r),0) || 1;
+  const max=Math.max(...top.map(anVisitors),1);
   el.innerHTML=top.map(r=>{
-    const name=anLabel(r,preferredKey);
-    const c=anCount(r);
-    return `<div class="catbar-row">
-      <div class="catbar-top"><span class="catbar-name">${anEsc(name)}</span><span class="catbar-val">${anNum(c)}</span></div>
-      <div class="catbar-track"><div class="catbar-fill" style="width:${c/max*100}%"></div></div>
+    let raw=anLabel(r,preferredKey);
+    let label=anEsc(raw);
+    if(kind==='country'){
+      const f=anFlag(raw);
+      label=`${f?`<span class="an-flag">${f}</span>`:''}${anEsc(anCountryName(raw))}`;
+    }else if(kind==='referrer' && (!raw || raw==='(none)')){
+      label='Direct / none';
+    }else if(kind==='device'||kind==='browser'||kind==='os'){
+      const KEEP={ios:'iOS',macos:'macOS',ipados:'iPadOS',tvos:'tvOS',windows:'Windows',android:'Android'};
+      const key=String(raw).toLowerCase();
+      label=anEsc(KEEP[key] || String(raw).replace(/\b[a-z]/g, c=>c.toUpperCase()));
+    }
+    const v=anVisitors(r);
+    const pct=Math.round(v/total*100);
+    return `<div class="an-row" title="${anEsc(raw)}: ${anNum(v)} visitor${v===1?'':'s'}">
+      <div class="an-row-bar" style="width:${Math.max(v/max*100,3)}%"></div>
+      <span class="an-row-name">${label}</span>
+      <span class="an-row-pct">${pct}%</span>
     </div>`;
   }).join('');
 }
@@ -868,10 +908,12 @@ function renderAnalytics(d){
     bars.innerHTML=''; document.getElementById('anChartHm').textContent='No data yet';
   }
 
-  anBarList(document.getElementById('anPages'),d.topPages,'requestPath');
-  anBarList(document.getElementById('anRefs'),d.referrers,'referrerHostname');
-  anBarList(document.getElementById('anDevices'),d.devices,'deviceType');
-  anBarList(document.getElementById('anCountries'),d.countries,'country');
+  anBarList(document.getElementById('anPages'),d.topPages,'requestPath','page');
+  anBarList(document.getElementById('anRefs'),d.referrers,'referrerHostname','referrer');
+  anBarList(document.getElementById('anDevices'),d.devices,'deviceType','device');
+  anBarList(document.getElementById('anCountries'),d.countries,'country','country');
+  anBarList(document.getElementById('anBrowsers'),d.browsers,'browser','browser');
+  anBarList(document.getElementById('anSystems'),d.systems,'os','os');
 
   const ev=(d.events||[]).slice().sort((a,b)=>anCount(b)-anCount(a));
   if(ev.length){

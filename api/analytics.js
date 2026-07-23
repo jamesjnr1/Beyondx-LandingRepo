@@ -84,7 +84,7 @@ export default async function handler(req, res) {
   // Previous period of the same length, for "vs last period" comparisons
   const prevRange = { since: daysAgo(days * 2), until: since }
 
-  const [totals, prevTotals, overTime, topPages, referrers, devices, countries, events] =
+  const [totals, prevTotals, overTime, topPages, referrers, devices, countries, browsers, systems, events] =
     await Promise.all([
       safe('totals', () => query('visits/count', range)),
       safe('prevTotals', () => query('visits/count', prevRange)),
@@ -93,6 +93,8 @@ export default async function handler(req, res) {
       safe('referrers', () => query('visits/aggregate', { ...range, by: 'referrerHostname', limit: 8 })),
       safe('devices', () => query('visits/aggregate', { ...range, by: 'deviceType', limit: 8 })),
       safe('countries', () => query('visits/aggregate', { ...range, by: 'country', limit: 8 })),
+      safe('browsers', () => query('visits/aggregate', { ...range, by: 'browser', limit: 8 })),
+      safe('systems', () => query('visits/aggregate', { ...range, by: 'os', limit: 8 })),
       safe('events', () => query('events/aggregate', { ...range, by: 'eventName', limit: 20 })),
     ])
 
@@ -132,6 +134,8 @@ export default async function handler(req, res) {
     referrers: referrers?.data ?? [],
     devices: devices?.data ?? [],
     countries: countries?.data ?? [],
+    browsers: browsers?.data ?? [],
+    systems: systems?.data ?? [],
     events: eventRows,
     eventsUnavailable,
     problems,
