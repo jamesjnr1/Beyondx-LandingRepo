@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode, type FormEvent, type InputHTMLAttributes } from 'react'
-import { X, ShieldCheck, HeartHandshake, ChevronLeft } from 'lucide-react'
+import { X, ShieldCheck, ChevronLeft } from 'lucide-react'
 import Logo from '../Logo'
 import { useAuth, type AuthView } from './AuthContext'
 import { auth, session, referral, ApiError } from '../../lib/api'
+import OnboardingQuestions from './OnboardingQuestions'
 
 const REGIONS = [
   'Greater Accra', 'Ashanti', 'Western', 'Central', 'Eastern',
@@ -339,6 +340,16 @@ function WorkerRegister() {
 function EmployerOnboarding() {
   const { go } = useAuth()
   const [agreed, setAgreed] = useState(false)
+  const [stage, setStage] = useState<'notice' | 'questions'>('notice')
+
+  if (stage === 'questions') {
+    return (
+      <Modal title="A Few Quick Questions" subtitle="This helps us serve you better">
+        <OnboardingQuestions role="employer" onDone={() => go('employer-dashboard')} />
+      </Modal>
+    )
+  }
+
   return (
     <Modal title="Before You Proceed" subtitle="Important notice regarding our talent pool">
       <div className="space-y-4 text-sm text-ink-700">
@@ -353,8 +364,8 @@ function EmployerOnboarding() {
           <span className="text-xs text-ink-800">I have read and understood this notice, and I agree to engage all workers with fairness and human dignity.</span>
         </label>
       </div>
-      <button disabled={!agreed} onClick={() => go('employer-dashboard')} className="mt-5 w-full rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 shadow-sm transition-all hover:bg-forest-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40">
-        Proceed to Dashboard
+      <button disabled={!agreed} onClick={() => setStage('questions')} className="mt-5 w-full rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 shadow-sm transition-all hover:bg-forest-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40">
+        Continue
       </button>
     </Modal>
   )
@@ -362,24 +373,9 @@ function EmployerOnboarding() {
 
 function WorkerOnboarding() {
   const { go } = useAuth()
-  const [agreed, setAgreed] = useState(false)
   return (
     <Modal title="Before You Begin" subtitle="Welcome. You belong here.">
-      <div className="space-y-4 text-sm text-ink-700">
-        <p>This platform was built for you — because your skills, your time, and your willingness to work have value.</p>
-        <ul className="space-y-2">
-          {['You have the right to fair pay for every completed job.', 'You have the right to report any employer who treats you unfairly.', 'More completed jobs means a stronger profile and access to better opportunities.'].map((t) => (
-            <li key={t} className="flex gap-2"><HeartHandshake size={16} className="mt-0.5 shrink-0 text-forest-600" /><span>{t}</span></li>
-          ))}
-        </ul>
-        <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-forest-600/5 p-3">
-          <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-forest-600" />
-          <span className="text-xs text-ink-800">By joining, I agree to conduct myself honestly and complete assigned jobs to the best of my ability.</span>
-        </label>
-      </div>
-      <button disabled={!agreed} onClick={() => go('worker-dashboard')} className="mt-5 w-full rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 shadow-sm transition-all hover:bg-forest-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40">
-        Enter My Dashboard
-      </button>
+      <OnboardingQuestions role="worker" onDone={() => go('worker-dashboard')} />
     </Modal>
   )
 }

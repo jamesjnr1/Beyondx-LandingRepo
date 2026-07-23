@@ -7,7 +7,7 @@ const socials = [
   { icon: Music2, href: 'https://www.tiktok.com/@beyondx26', label: 'TikTok' },
   { icon: Twitter, href: 'https://x.com/beyondx26', label: 'X' },
   { icon: Linkedin, href: 'https://www.linkedin.com/company/beyondx', label: 'LinkedIn' },
-  { icon: Mail, href: 'mailto:hello@beyondx.gh', label: 'Email' },
+  { icon: Mail, href: 'mailto:beyondx26@gmail.com', label: 'Email' },
 ]
 
 export default function Footer() {
@@ -58,7 +58,7 @@ export default function Footer() {
             <h4 className="mb-4 text-sm font-semibold text-ink-900">Contact</h4>
             <ul className="space-y-2.5 text-sm text-ink-700/70">
               <li>Greater Accra, Ghana</li>
-              <li><a href="mailto:hello@beyondx.gh" className="transition-colors hover:text-forest-600">hello@beyondx.gh</a></li>
+              <li><a href="mailto:beyondx26@gmail.com" className="transition-colors hover:text-forest-600">beyondx26@gmail.com</a></li>
             </ul>
           </div>
         </div>

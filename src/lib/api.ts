@@ -282,6 +282,23 @@ export const tasks = {
 
 /* ------------------------------- employers ----------------------------- */
 
+// Onboarding answers and enquiries go to this app's own /api/contact function,
+// which stores the lead and emails BeyondX. Not the Railway backend.
+export const contact = {
+  send: (payload: { name: string; email?: string; phone?: string; message: string; category: string }) =>
+    fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(async (r) => {
+      const t = await r.text()
+      let d: unknown = null
+      try { d = t ? JSON.parse(t) : null } catch { /* non-JSON (e.g. a 404 page) */ }
+      if (!r.ok) throw new ApiError((d as { error?: string })?.error || `Could not send (${r.status})`, r.status)
+      return d
+    }),
+}
+
 export const media = {
   upload: (imageBase64: string, fileName: string, folder: string) =>
     fetch('/api/upload', {
