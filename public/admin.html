@@ -893,7 +893,10 @@ function renderAnalytics(d){
   if(d.problems&&d.problems.length){
     anAlert('Some panels could not load', anEsc(d.problems.join(' · ')));
   }
-  document.getElementById('anUpdated').textContent='Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  const proj = d.project ? ` · project ${d.project}` : '';
+  const rng = d.range ? ` · ${d.range.since} to ${d.range.until}` : '';
+  document.getElementById('anUpdated').textContent =
+    'Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + proj + rng;
 }
 
 function loadAnalytics(){

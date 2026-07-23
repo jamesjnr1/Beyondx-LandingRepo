@@ -112,7 +112,13 @@ export default async function handler(req, res) {
 
   // Admin-only endpoint: never cache, so Refresh always returns current numbers.
   res.setHeader('Cache-Control', 'no-store, max-age=0')
+  // Which project these numbers came from — the quickest way to spot a
+  // VERCEL_PROJECT_ID still pointing at an old project.
+  const pid = String(process.env.VERCEL_PROJECT_ID || '')
+  const projectHint = pid ? `…${pid.slice(-8)}` : null
+
   return res.status(200).json({
+    project: projectHint,
     range: { since, until, days },
     totals: {
       visitors,
