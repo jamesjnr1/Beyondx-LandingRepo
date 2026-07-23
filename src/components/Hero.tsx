@@ -35,7 +35,7 @@ export default function Hero() {
             className="max-w-2xl"
           >
             <p className="mb-4 text-[13px] font-medium uppercase tracking-[0.18em] text-cream-200/80">
-              Reintegration Programme
+              Skills-Verified Hiring
             </p>
             <h1 className="font-serif text-5xl font-medium leading-[1.05] text-cream-50 text-balance sm:text-6xl lg:text-7xl">
               Same Hands.
@@ -43,8 +43,7 @@ export default function Hero() {
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-cream-200/90 text-pretty">
               BeyondX connects Ghanaian employers with skilled, certified workers
-              rebuilding their lives after incarceration — verified, ready to work,
-              and hired on merit.
+              across Greater Accra — verified, ready to work, and hired on merit.
             </p>
           </motion.div>
 
