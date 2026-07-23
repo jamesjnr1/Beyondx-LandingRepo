@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Bell, X, Megaphone, CircleCheck, Clock, Wallet } from 'lucide-react'
 import type { Task } from '../lib/api'
 
@@ -100,17 +100,35 @@ function taskItems(role: 'worker' | 'employer', tasks: Task[]): Item[] {
     })
 }
 
+type Sent = { id: string; title: string; body: string; created_at: string }
+
 export default function Notifications({ role, tasks }: { role: 'worker' | 'employer'; tasks: Task[] }) {
   const [open, setOpen] = useState(false)
   const [read, setRead] = useState<string[]>(readIds)
+  const [sent, setSent] = useState<Sent[]>([])
+
+  // Notifications sent from the admin console. Silently ignored if the
+  // endpoint is not configured yet — the rest of the panel still works.
+  useEffect(() => {
+    let live = true
+    fetch(`/api/notifications?audience=${role}`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (live && d?.notifications) setSent(d.notifications) })
+      .catch(() => null)
+    return () => { live = false }
+  }, [role])
 
   const items = useMemo<Item[]>(() => {
+    const fromAdmin: Item[] = sent.map((n) => ({
+      id: `n-${n.id}`, kind: 'announcement', icon: 'megaphone',
+      date: n.created_at, title: n.title, body: n.body,
+    }))
     const announcements: Item[] = ANNOUNCEMENTS
       .filter((a) => a.audience === 'all' || a.audience === role)
       .map((a) => ({ id: a.id, kind: 'announcement', icon: 'megaphone', date: a.date, title: a.title, body: a.body }))
-    const all = [...announcements, ...taskItems(role, tasks)]
+    const all = [...fromAdmin, ...announcements, ...taskItems(role, tasks)]
     return all.sort((a, b) => String(b.date).localeCompare(String(a.date)))
-  }, [role, tasks])
+  }, [role, tasks, sent])
 
   const unread = items.filter((i) => !read.includes(i.id)).length
 

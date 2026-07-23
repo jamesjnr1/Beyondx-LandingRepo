@@ -257,36 +257,41 @@ tr:hover td{background:var(--bg);}
       <div class="sec" id="sec-messages"><div id="messagesContent"></div></div>
       <div class="sec" id="sec-employers"><input class="srch" id="eSearch" placeholder="Search employers by organisation or phone…" oninput="eSearchInput()"/><div class="tc"><div class="tc-h"><span class="tc-ht">Employers</span><span class="tc-hm" id="ec"></span></div><table><thead><tr><th>Organisation</th><th>Phone</th><th>Tasks</th><th>Completed</th><th>Total Spent</th></tr></thead><tbody id="et"></tbody></table><div id="etMore"></div></div></div>
       <div class="sec" id="sec-notify">
+        <div id="ntAlert"></div>
         <div class="an-note">
-          Send an update to workers, employers, or everyone. Messages go out by SMS, which reaches people who do not use smartphones. Automatic notifications inside the app keep running as normal.
+          These appear in the notification bell inside the worker and employer dashboards. Automatic notifications (offers, task updates, payments) keep working on their own. To reach people by SMS instead, use the SMS Log section.
         </div>
         <div class="tc" style="margin-bottom:16px;">
-          <div class="tc-h"><span class="tc-ht">Compose</span><span class="tc-hm" id="ntCount">—</span></div>
+          <div class="tc-h"><span class="tc-ht">New notification</span><span class="tc-hm" id="ntWho">Workers</span></div>
           <div style="padding:16px;">
             <div class="fld" style="margin-bottom:12px;">
-              <label style="display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;">Send to</label>
-              <button class="btn-r ntaud on" data-aud="workers" onclick="ntAudience('workers',this)">Workers</button>
-              <button class="btn-r ntaud" data-aud="employers" style="margin-left:6px;" onclick="ntAudience('employers',this)">Employers</button>
-              <button class="btn-r ntaud" data-aud="both" style="margin-left:6px;" onclick="ntAudience('both',this)">Everyone</button>
+              <label style="display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;">Show to</label>
+              <button class="btn-r ntaud on" data-aud="worker" onclick="ntAudience('worker',this)">Workers</button>
+              <button class="btn-r ntaud" data-aud="employer" style="margin-left:6px;" onclick="ntAudience('employer',this)">Employers</button>
+              <button class="btn-r ntaud" data-aud="all" style="margin-left:6px;" onclick="ntAudience('all',this)">Everyone</button>
             </div>
             <div class="fld" style="margin-bottom:12px;">
-              <label style="display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;">Quick templates</label>
-              <button class="btn-r" onclick="ntTemplate('work')">New work available</button>
+              <label style="display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;">Templates</label>
+              <button class="btn-r" onclick="ntTemplate('work')">New work</button>
               <button class="btn-r" style="margin-left:6px;" onclick="ntTemplate('update')">Platform update</button>
-              <button class="btn-r" style="margin-left:6px;" onclick="ntTemplate('event')">Event / training</button>
-              <button class="btn-r" style="margin-left:6px;" onclick="ntTemplate('reminder')">Profile reminder</button>
+              <button class="btn-r" style="margin-left:6px;" onclick="ntTemplate('event')">Event</button>
+              <button class="btn-r" style="margin-left:6px;" onclick="ntTemplate('reminder')">Reminder</button>
+            </div>
+            <div class="fld" style="margin-bottom:12px;">
+              <label style="display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;">Title</label>
+              <input id="ntTitle" maxlength="70" placeholder="e.g. New work available" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px;font-family:inherit;">
             </div>
             <div class="fld" style="margin-bottom:6px;">
               <label style="display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;">Message</label>
-              <textarea id="ntMessage" rows="5" maxlength="480" oninput="ntChars()" placeholder="Write your update…" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
-              <div class="tb-t" style="margin-top:6px;" id="ntChars">0 characters · about 1 SMS</div>
+              <textarea id="ntMessage" rows="4" maxlength="400" oninput="ntChars()" placeholder="Write the update…" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
+              <div class="tb-t" style="margin-top:6px;" id="ntChars">0 characters</div>
             </div>
-            <button class="btn-r on" onclick="ntSend()">Review &amp; send</button>
-            <button class="btn-r" style="margin-left:8px;" onclick="document.getElementById('ntMessage').value='';ntChars()">Clear</button>
+            <button class="btn-r on" onclick="ntSend()">Publish notification</button>
+            <button class="btn-r" style="margin-left:8px;" onclick="ntClear()">Clear</button>
           </div>
         </div>
         <div class="tc">
-          <div class="tc-h"><span class="tc-ht">Sent this session</span></div>
+          <div class="tc-h"><span class="tc-ht">Published</span><span class="tc-hm">Visible in dashboards now</span></div>
           <div id="ntLog"></div>
         </div>
       </div>
@@ -437,7 +442,7 @@ function nav(id,el){
   el.classList.add('on');
   const T={overview:'Overview',payouts:'Pay Now',active:'In Progress',open:'Open Tasks',completed:'Completed Tasks',all:'All Tasks',workers:'Workers',employers:'Employers',history:'Work History',transactions:'Transactions',messages:'SMS Log',analytics:'Site Analytics',payconfirm:'Payment Confirmations',notify:'Send Notification'};
   document.getElementById('pageTitle').textContent=T[id]||id;
-  if(id==='notify'){ ntChars(); ntRenderLog(); ntRecipients().then(n=>{ document.getElementById('ntCount').textContent = n===null?'—':`${n} recipient${n===1?'':'s'}`; }); return; }
+  if(id==='notify'){ ntChars(); ntLoad(); return; }
   if(id==='payconfirm'){ pcEmployerList().then(pcPreview); pcRenderLog(); return; }
   if(id==='analytics'){if(!anData)loadAnalytics();return;}
   if(id!=='overview')rs(id);
@@ -1008,98 +1013,114 @@ document.addEventListener('click',closeActions);
 document.addEventListener('keydown',e=>{ if(e.key==='Escape')closeActions(); });
 
 
-/* =================== SEND NOTIFICATION =================== */
-let ntAud = 'workers';
-const ntLog = [];
+/* =================== SEND NOTIFICATION (in-app) =================== */
+let ntAud = 'worker';
+const NT_LABEL = { worker:'Workers', employer:'Employers', all:'Everyone' };
 
 function ntAudience(a, el){
   ntAud = a;
   document.querySelectorAll('.ntaud').forEach(b=>b.classList.remove('on'));
   el.classList.add('on');
-  ntRecipients().then(n=>{
-    document.getElementById('ntCount').textContent = n===null ? '—' : `${n} recipient${n===1?'':'s'}`;
-  });
-}
-
-async function ntRecipients(){
-  try{
-    const phones = await ntPhones();
-    return phones.length;
-  }catch(e){ return null; }
-}
-
-async function ntPhones(){
-  let list = [];
-  if(ntAud==='workers'||ntAud==='both'){
-    const d = await fetch(API+'/admin/workers',{headers:{'x-admin-password':pass}}).then(r=>r.json());
-    list = list.concat((d.workers||[]).map(w=>w.phone).filter(Boolean));
-  }
-  if(ntAud==='employers'||ntAud==='both'){
-    const d = await fetch(API+'/admin/employers',{headers:{'x-admin-password':pass}}).then(r=>r.json());
-    list = list.concat((d.employers||[]).map(e=>e.phone).filter(Boolean));
-  }
-  return [...new Set(list)];
+  document.getElementById('ntWho').textContent = NT_LABEL[a];
+  ntLoad();
 }
 
 function ntChars(){
   const v = document.getElementById('ntMessage').value;
-  const parts = Math.max(1, Math.ceil(v.length/160));
-  document.getElementById('ntChars').textContent = `${v.length} characters · about ${parts} SMS${parts>1?' per person':''}`;
+  document.getElementById('ntChars').textContent = `${v.length} characters`;
 }
 
-const NT_TEMPLATES = {
-  work: 'BeyondX: New work is available on the platform. Log in at beyondxco.com to see tasks you can accept.',
-  update: 'BeyondX update: We have made improvements to the platform. Log in at beyondxco.com to see what is new.',
-  event: 'BeyondX: We have an upcoming session for our members. Reply to this message or call us to reserve your place.',
-  reminder: 'BeyondX: Please keep your profile up to date so we can match you to the right work faster. Log in at beyondxco.com.'
-};
-function ntTemplate(k){
-  document.getElementById('ntMessage').value = NT_TEMPLATES[k] || '';
+function ntClear(){
+  document.getElementById('ntTitle').value='';
+  document.getElementById('ntMessage').value='';
   ntChars();
 }
 
-async function ntSend(){
-  const message = document.getElementById('ntMessage').value.trim();
-  if(!message){ showToast('Write a message first.'); return; }
-  showToast('Gathering recipients…');
-  let phones;
-  try{ phones = await ntPhones(); }
-  catch(e){ showToast('Could not load recipients.'); return; }
-  if(!phones.length){ showToast('No recipients with phone numbers.'); return; }
-  const who = ntAud==='both' ? 'workers and employers' : ntAud;
-  if(!confirm(`Send this message to ${phones.length} ${who}?\n\n"${message}"`)) return;
-
-  showToast(`Sending to ${phones.length}…`);
-  let sent=0, failed=0;
-  for(const phone of phones){
-    try{
-      const r = await fetch(API+'/admin/send-sms',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','x-admin-password':pass},
-        body:JSON.stringify({phone, message})
-      });
-      r.ok ? sent++ : failed++;
-    }catch(e){ failed++; }
-  }
-  showToast(failed ? `Sent to ${sent}, failed for ${failed}.` : `Sent to all ${sent}.`);
-  ntLog.unshift({who, count:sent, failed, message, at:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})});
-  ntRenderLog();
+const NT_TEMPLATES = {
+  work:     { t:'New work available',   m:'New tasks have been posted on BeyondX. Open your dashboard to see what you can accept.' },
+  update:   { t:'Platform update',      m:'We have made improvements to BeyondX. Log in to see what has changed.' },
+  event:    { t:'Upcoming session',     m:'We are running a session for BeyondX members soon. Get in touch to reserve your place.' },
+  reminder: { t:'Keep your profile up to date', m:'Please check your profile and skills are current so we can match you to the right work faster.' }
+};
+function ntTemplate(k){
+  const t = NT_TEMPLATES[k]; if(!t) return;
+  document.getElementById('ntTitle').value = t.t;
+  document.getElementById('ntMessage').value = t.m;
+  ntChars();
 }
 
-function ntRenderLog(){
+function ntAlert(title,msg){
+  document.getElementById('ntAlert').innerHTML =
+    `<div class="alrt"><div><div class="alrt-t">${anEsc(title)}</div><div class="alrt-s">${anEsc(msg)}</div></div></div>`;
+}
+
+async function ntSend(){
+  const title = document.getElementById('ntTitle').value.trim();
+  const message = document.getElementById('ntMessage').value.trim();
+  if(!title){ showToast('Give the notification a title.'); return; }
+  if(!message){ showToast('Write a message first.'); return; }
+  if(!confirm(`Publish this notification to ${NT_LABEL[ntAud].toLowerCase()}?\n\n${title}\n${message}`)) return;
+
+  showToast('Publishing…');
+  try{
+    const r = await fetch('/api/notifications',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-secret':pass},
+      body:JSON.stringify({audience:ntAud, title, body:message})
+    });
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok){
+      ntAlert('Could not publish', d.error || `HTTP ${r.status}`);
+      showToast('Could not publish.');
+      return;
+    }
+    document.getElementById('ntAlert').innerHTML='';
+    showToast('Notification published.');
+    ntClear();
+    ntLoad();
+  }catch(e){
+    ntAlert('Could not publish', e.message);
+  }
+}
+
+async function ntLoad(){
   const el = document.getElementById('ntLog');
   if(!el) return;
-  el.innerHTML = ntLog.length
-    ? ntLog.map(x=>`<div class="trow" style="padding:12px 16px;">
-        <div style="display:flex;justify-content:space-between;gap:12px;">
-          <span class="tn">${anEsc(x.who)} · ${x.count} sent${x.failed?` · ${x.failed} failed`:''}</span>
-          <span class="tm">${anEsc(x.at)}</span>
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    const d = await fetch(`/api/notifications?audience=${ntAud}&_=${Date.now()}`,{cache:'no-store'}).then(r=>r.json());
+    if(d.configured === false){
+      el.innerHTML = '<div class="empty">Storage not configured yet — add SUPABASE_URL and SUPABASE_SERVICE_KEY in Vercel.</div>';
+      return;
+    }
+    const rows = d.notifications || [];
+    el.innerHTML = rows.length ? rows.map(n=>`
+      <div class="trow" style="padding:12px 16px;">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;">
+          <span class="tn">${anEsc(n.title)}</span>
+          <span class="tm">${anEsc(NT_LABEL[n.audience]||n.audience)} · ${anEsc(new Date(n.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'}))}
+            <button class="btn-r" style="margin-left:8px;color:#b91c1c;border-color:#f3c9c9;" onclick="ntDelete('${anEsc(n.id)}')">Remove</button>
+          </span>
         </div>
-        <div class="tm" style="margin-top:4px;">${anEsc(x.message)}</div>
+        <div class="tm" style="margin-top:4px;">${anEsc(n.body)}</div>
       </div>`).join('')
-    : '<div class="empty">Nothing sent in this session.</div>';
+      : '<div class="empty">Nothing published yet.</div>';
+  }catch(e){
+    el.innerHTML = '<div class="empty">Could not load published notifications.</div>';
+  }
 }
 
+async function ntDelete(id){
+  if(!confirm('Remove this notification from all dashboards?')) return;
+  try{
+    const r = await fetch(`/api/notifications?id=${encodeURIComponent(id)}`,{
+      method:'DELETE', headers:{'x-admin-secret':pass}
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    showToast('Removed.');
+    ntLoad();
+  }catch(e){ showToast('Could not remove: '+e.message); }
+}
 </script>
 </body>
 </html>
