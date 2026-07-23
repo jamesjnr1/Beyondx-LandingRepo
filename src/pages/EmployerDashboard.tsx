@@ -4,6 +4,7 @@ import DashboardHeader from './DashboardHeader'
 import ProfileModal from '../components/ProfileModal'
 import Toast, { type ToastMsg } from '../components/Toast'
 import { tasks as tasksApi, workers as workersApi, employers as employersApi, contact, session, ApiError, type Task, type Worker, type Employer } from '../lib/api'
+import { DISPATCH_ENABLED, DISPATCH_PAUSED_MESSAGE } from '../lib/config'
 
 const cedis = (n?: number | string) => `GH\u20b5 ${Number(n || 0).toLocaleString()}`
 const wName = (w: Worker) => (w.fullName as string) || (w.name as string) || 'Worker'
@@ -162,6 +163,14 @@ export default function EmployerDashboard() {
 
         {tab === 'hire' && (
           <div className="mt-6">
+            {!DISPATCH_ENABLED && (
+              <div className="mb-4 rounded-xl bg-clay-400/10 p-4 ring-1 ring-clay-400/25">
+                <p className="flex items-start gap-2 text-sm leading-relaxed text-ink-800">
+                  <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-clay-500" />
+                  <span><span className="font-semibold">Dispatch is paused for now.</span> {DISPATCH_PAUSED_MESSAGE}</span>
+                </p>
+              </div>
+            )}
             {loading ? <Skeleton /> : workerList.length ? (
               <ul className="divide-y divide-ink-900/10 overflow-hidden rounded-2xl bg-cream-50 shadow-sm ring-1 ring-ink-900/5">
                 {workerList.map((w) => (
@@ -226,7 +235,7 @@ export default function EmployerDashboard() {
       <Toast toast={toast} onClose={() => setToast(null)} />
 
       {viewing && <WorkerProfileModal worker={viewing} onClose={() => setViewing(null)} onDispatch={() => { const w = viewing; setViewing(null); setDispatching(w) }} />}
-      {dispatching && <DispatchModal worker={dispatching} onClose={() => setDispatching(null)} onDone={afterDispatch} onError={(m) => setToast({ id: Date.now(), kind: 'info', title: 'Dispatch failed', detail: m })} />}
+      {dispatching && DISPATCH_ENABLED && <DispatchModal worker={dispatching} onClose={() => setDispatching(null)} onDone={afterDispatch} onError={(m) => setToast({ id: Date.now(), kind: 'info', title: 'Dispatch failed', detail: m })} />}
       {rating && <RateModal task={rating} onClose={() => setRating(null)} onDone={afterConfirm} onError={(m) => setToast({ id: Date.now(), kind: 'info', title: 'Could not confirm', detail: m })} />}
       {editing && profile !== undefined && (
         <ProfileModal
@@ -331,14 +340,23 @@ function WorkerProfileModal({ worker, onClose, onDispatch }: { worker: Worker; o
 
         {/* Action stays pinned */}
         <div className="shrink-0 border-t border-ink-900/10 bg-cream-50 p-4">
-          <button
-            onClick={onDispatch}
-            disabled={!!worker.isBusy}
-            aria-label={`Dispatch ${wName(worker)}`}
-            className="flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40"
-          >
-            <Send size={15} aria-hidden="true" /> {worker.isBusy ? 'Currently on a job' : `Dispatch ${wName(worker).split(' ')[0]}`}
-          </button>
+          {DISPATCH_ENABLED ? (
+            <button
+              onClick={onDispatch}
+              disabled={!!worker.isBusy}
+              aria-label={`Dispatch ${wName(worker)}`}
+              className="flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40"
+            >
+              <Send size={15} aria-hidden="true" /> {worker.isBusy ? 'Currently on a job' : `Dispatch ${wName(worker).split(' ')[0]}`}
+            </button>
+          ) : (
+            <div className="rounded-xl bg-clay-400/10 p-3.5 ring-1 ring-clay-400/25">
+              <p className="flex items-start gap-2 text-xs leading-relaxed text-ink-800">
+                <Info size={14} aria-hidden="true" className="mt-0.5 shrink-0 text-clay-500" />
+                <span><span className="font-semibold">Dispatch is paused for now.</span> {DISPATCH_PAUSED_MESSAGE}</span>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
