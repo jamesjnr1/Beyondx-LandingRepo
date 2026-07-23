@@ -65,8 +65,12 @@ export default async function handler(req, res) {
       )
       const text = await r.text()
       if (!r.ok) {
-        console.error('[notifications] read failed', r.status, text.slice(0, 200))
-        return res.status(200).json({ notifications: [], configured: true, error: true })
+        console.error('[notifications] read failed', r.status, text.slice(0, 300))
+        const missingTable = r.status === 404 || text.includes('does not exist')
+        return res.status(200).json({
+          notifications: [], configured: true, error: true,
+          missingTable: missingTable || undefined,
+        })
       }
       return res.status(200).json({ notifications: JSON.parse(text || '[]'), configured: true })
     } catch (err) {

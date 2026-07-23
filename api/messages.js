@@ -61,8 +61,19 @@ export default async function handler(req, res) {
       )
       const text = await r.text()
       if (!r.ok) {
-        console.error('[messages] read failed', r.status, text.slice(0, 200))
-        return res.status(200).json({ messages: [], configured: true, error: `Could not read (${r.status}).` })
+        console.error('[messages] read failed', r.status, text.slice(0, 300))
+        // A 404 from PostgREST means the table itself is missing — say so,
+        // rather than leaving a bare status code.
+        const missingTable = r.status === 404 || text.includes('does not exist')
+        return res.status(200).json({
+          messages: [],
+          configured: true,
+          missingTable: missingTable || undefined,
+          error: missingTable
+            ? `The "${TABLE}" table does not exist in Supabase yet.`
+            : `Could not read (${r.status}).`,
+          reason: (() => { try { return JSON.parse(text).message } catch { return text.slice(0, 200) } })(),
+        })
       }
       return res.status(200).json({ messages: JSON.parse(text || '[]'), configured: true })
     } catch (err) {
