@@ -23,12 +23,14 @@
 const DEFAULT_TO = 'beyondx26@gmail.com'
 const DEFAULT_FROM = 'BeyondX <onboarding@resend.dev>'
 
-// "a@b.com, c@d.com" -> ["a@b.com", "c@d.com"]
+// Accepts commas, semicolons, spaces or newlines between addresses, and
+// ignores anything that is not a plausible email so one typo cannot break the
+// whole send.
 function addresses(value) {
   return String(value || '')
-    .split(',')
-    .map((a) => a.trim())
-    .filter(Boolean)
+    .split(/[,;\s]+/)
+    .map((a) => a.trim().replace(/^[<"']+|[>"']+$/g, ''))
+    .filter((a) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(a))
 }
 
 function escapeHtml(value) {
@@ -120,6 +122,19 @@ export default async function handler(req, res) {
       ...addresses(process.env.CONTACT_REPLY_TO),
     ].filter((a, i, all) => all.indexOf(a) === i)
 
+    const to = addresses(process.env.CONTACT_TO).length
+      ? addresses(process.env.CONTACT_TO)
+      : [DEFAULT_TO]
+    const from = process.env.CONTACT_FROM || DEFAULT_FROM
+
+    // Visible in the Vercel function log — the quickest way to confirm which
+    // addresses the server actually resolved.
+    console.log(`[contact] sending to ${to.length}: ${to.join(', ')} | from: ${from}`)
+
+    if (to.length > 1 && from.includes('resend.dev')) {
+      console.warn('[contact] Multiple recipients with the shared resend.dev sender — Resend only delivers to your own account email until CONTACT_FROM uses a verified domain.')
+    }
+
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -127,10 +142,8 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.CONTACT_FROM || DEFAULT_FROM,
-        to: addresses(process.env.CONTACT_TO).length
-          ? addresses(process.env.CONTACT_TO)
-          : [DEFAULT_TO],
+        from,
+        to,
         subject,
         html,
         text,
@@ -159,7 +172,11 @@ export default async function handler(req, res) {
       })
     }
 
-    return res.status(200).json({ ok: true })
+    return res.status(200).json({
+      ok: true,
+      recipients: to.length,
+      usingSharedSender: from.includes('resend.dev') || undefined,
+    })
   } catch (err) {
     console.error('[contact] send failed:', err.message)
     return res.status(500).json({ error: 'Could not send the message. Please try again.' })
