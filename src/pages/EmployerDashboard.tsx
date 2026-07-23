@@ -3,6 +3,7 @@ import { ChevronRight, Star, Send, Phone, Plus, X, ShieldCheck, CircleCheck, Inf
 import DashboardHeader from './DashboardHeader'
 import ProfileModal from '../components/ProfileModal'
 import Toast, { type ToastMsg } from '../components/Toast'
+import SupportPanel from '../components/SupportPanel'
 import { tasks as tasksApi, workers as workersApi, employers as employersApi, contact, session, ApiError, type Task, type Worker, type Employer } from '../lib/api'
 import { DISPATCH_ENABLED, DISPATCH_PAUSED_MESSAGE } from '../lib/config'
 
@@ -85,7 +86,7 @@ function Skeleton() {
 }
 
 export default function EmployerDashboard() {
-  const [tab, setTab] = useState<'hire' | 'post' | 'history'>('hire')
+  const [tab, setTab] = useState<'hire' | 'post' | 'history' | 'support'>('hire')
   const [viewing, setViewing] = useState<Worker | null>(null)
   const [dispatching, setDispatching] = useState<Worker | null>(null)
   const [rating, setRating] = useState<Task | null>(null)
@@ -156,7 +157,7 @@ export default function EmployerDashboard() {
         </div>
 
         <div className="mt-8 flex items-center gap-2 overflow-x-auto border-b border-ink-900/10 pb-px" role="tablist" aria-label="Employer sections">
-          {([['hire', 'Hire Workers'], ['post', 'Post a Task'], ['history', `Dispatch History (${taskList.length})`]] as const).map(([id, label]) => (
+          {([['hire', 'Hire Workers'], ['post', 'Post a Task'], ['history', `Dispatch History (${taskList.length})`], ['support', 'Support']] as const).map(([id, label]) => (
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
               className={`shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40 ${tab === id ? 'border-forest-600 text-forest-700' : 'border-transparent text-ink-700 hover:text-ink-900'}`}>
               {label}
@@ -201,6 +202,14 @@ export default function EmployerDashboard() {
               </ul>
             ) : <Empty text="No workers available yet." />}
           </div>
+        )}
+
+        {tab === 'support' && (
+          <SupportPanel
+            role="employer"
+            onSent={() => setToast({ id: Date.now(), kind: 'success', title: 'Message sent', detail: 'Our team will follow up with you shortly.' })}
+            onError={(m) => setToast({ id: Date.now(), kind: 'info', title: 'Could not send', detail: m })}
+          />
         )}
 
         {tab === 'post' && <PostTask onDone={(msg) => { setToast({ id: Date.now(), kind: 'success', title: 'Task posted', detail: msg }); load() }} />}

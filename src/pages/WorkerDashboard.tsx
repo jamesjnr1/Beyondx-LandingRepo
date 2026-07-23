@@ -4,6 +4,7 @@ import DashboardHeader from './DashboardHeader'
 import ReferralCard from '../components/ReferralCard'
 import ProfileModal, { type Profile } from '../components/ProfileModal'
 import Toast, { type ToastMsg } from '../components/Toast'
+import SupportPanel from '../components/SupportPanel'
 import { tasks as tasksApi, workers as workersApi, contact, session, ApiError, type Task, type Worker } from '../lib/api'
 
 const cedis = (n?: number | string) => `GH\u20b5 ${Number(n || 0).toLocaleString()}`
@@ -72,7 +73,7 @@ function TaskCard({ task, children }: { task: Task; children?: ReactNode }) {
 }
 
 export default function WorkerDashboard() {
-  const [tab, setTab] = useState<'available' | 'mine' | 'declined' | 'history'>('available')
+  const [tab, setTab] = useState<'available' | 'mine' | 'declined' | 'history' | 'support'>('available')
   const [offers, setOffers] = useState<Task[]>([])
   const [open, setOpen] = useState<Task[]>([])
   const [mine, setMine] = useState<Task[]>([])
@@ -188,6 +189,7 @@ export default function WorkerDashboard() {
     { id: 'mine', label: `My Tasks (${mine.length})` },
     { id: 'declined', label: `Declined (${declined.length})` },
     { id: 'history', label: `History (${history.length})` },
+    { id: 'support', label: 'Support' },
   ] as const
 
   return (
@@ -228,8 +230,16 @@ export default function WorkerDashboard() {
           </button>
         </div>
 
+        {tab === 'support' && (
+          <SupportPanel
+            role="worker"
+            onSent={() => setToast({ id: Date.now(), kind: 'success', title: 'Message sent', detail: 'Our team will follow up with you shortly.' })}
+            onError={(m) => setToast({ id: Date.now(), kind: 'info', title: 'Could not send', detail: m })}
+          />
+        )}
+
         <div className="mt-6 space-y-3">
-          {loading ? <Skeleton /> : (
+          {tab === 'support' ? null : loading ? <Skeleton /> : (
             <>
               {tab === 'available' && (available.length ? available.map((t) => (
                 <TaskCard key={t.id} task={t}>
