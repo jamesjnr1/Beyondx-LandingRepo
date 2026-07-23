@@ -20,6 +20,30 @@
 //   CONTACT_REPLY_TO  where replies go. Comma-separated for several.
 //   CONTACT_FROM      verified sender, e.g. "BeyondX <noreply@beyondxco.com>".
 
+// Optional archive of inbound messages, read by the admin console.
+async function storeMessage(row) {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_KEY
+  if (!url || !key) return
+  const r = await fetch(`${url}/rest/v1/support_messages`, {
+    method: 'POST',
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+    body: JSON.stringify({
+      category: row.category,
+      name: row.name || null,
+      email: row.email || null,
+      phone: row.phone || null,
+      message: row.message,
+    }),
+  })
+  if (!r.ok) console.error('[contact] archive failed', r.status, (await r.text()).slice(0, 200))
+}
+
 const DEFAULT_TO = 'beyondx26@gmail.com'
 const DEFAULT_FROM = 'BeyondX <onboarding@resend.dev>'
 
@@ -175,6 +199,10 @@ export default async function handler(req, res) {
             : undefined,
       })
     }
+
+    // Best effort: also file it so the admin console has a record. A storage
+    // failure must never stop the email from being reported as sent.
+    await storeMessage({ category: category || 'contact', name, email, phone, message }).catch(() => null)
 
     return res.status(200).json({
       ok: true,
