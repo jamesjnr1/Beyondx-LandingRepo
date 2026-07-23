@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useState, type ReactNode } from 'react'
 import { session } from '../../lib/api'
 
 export type AuthView =
@@ -26,26 +26,42 @@ const Ctx = createContext<AppCtx>({
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [view, setView] = useState<AuthView>(null)
-  const [page, setPage] = useState<Page>('home')
+  // Restore the page the user was actually on before a refresh — not just any
+  // page a stored token could reach. A visitor who lands on the homepage with an
+  // old token still sees the homepage; only someone who was on a dashboard, and
+  // still holds the matching token, is returned there.
+  const initialPage = (): Page => {
+    try {
+      const last = localStorage.getItem('bx_view')
+      if (last === 'worker-dashboard' && session.workerToken()) return 'worker-dashboard'
+      if (last === 'employer-dashboard' && session.employerToken()) return 'employer-dashboard'
+    } catch { /* storage unavailable */ }
+    return 'home'
+  }
 
-  // Keep people signed in across refreshes, using the same session the main site sets.
-  useEffect(() => {
-    if (session.workerToken()) setPage('worker-dashboard')
-    else if (session.employerToken()) setPage('employer-dashboard')
-  }, [])
+  const [view, setView] = useState<AuthView>(null)
+  const [page, setPage] = useState<Page>(initialPage)
+
+  const persistView = (p: Page) => {
+    try {
+      if (p === 'worker-dashboard' || p === 'employer-dashboard') localStorage.setItem('bx_view', p)
+      else localStorage.removeItem('bx_view')
+    } catch { /* storage unavailable */ }
+  }
 
   const logout = () => {
     if (page === 'worker-dashboard') session.logoutWorker()
     if (page === 'employer-dashboard') session.logoutEmployer()
     setView(null)
     setPage('home')
+    persistView('home')
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'auto' })
   }
 
   const go = (p: Page) => {
     setView(null)
     setPage(p)
+    persistView(p)
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'auto' })
   }
 
