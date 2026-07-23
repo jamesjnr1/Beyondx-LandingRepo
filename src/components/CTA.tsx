@@ -27,7 +27,7 @@ export default function CTA() {
               <span className="italic text-clay-300">hire with purpose?</span>
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-lg text-cream-200/80 text-pretty">
-              Join employers across Greater Accra building better businesses —
+              Join employers across Ghana building better businesses —
               and better futures — through BeyondX.
             </p>
 

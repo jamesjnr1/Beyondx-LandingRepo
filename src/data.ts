@@ -110,7 +110,7 @@ export const steps: Step[] = [
     number: '04',
     title: 'Pay securely via mobile money',
     description:
-      'When the task is complete and approved, payment is settled through secure mobile money. 15% fee, 85% to the worker.',
+      'When the task is complete and approved, payment is settled through secure mobile money. The worker keeps 100% of the task rate.',
   },
 ]
 
@@ -144,7 +144,7 @@ export interface Stat {
 
 export const stats: Stat[] = [
   { value: '15%', label: 'Service fee per completed job' },
-  { value: '85%', label: 'Paid directly to the worker' },
+  { value: '100%', label: 'Paid directly to the worker' },
   { value: '7', label: 'Certified skill categories' },
   { value: '100%', label: 'GPS-verified attendance' },
 ]

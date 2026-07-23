@@ -43,7 +43,7 @@ export default function Hero() {
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-cream-200/90 text-pretty">
               BeyondX connects Ghanaian employers with skilled, certified workers
-              across Greater Accra — verified, ready to work, and hired on merit.
+              across Ghana — verified, ready to work, and hired on merit.
             </p>
           </motion.div>
 

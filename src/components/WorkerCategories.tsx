@@ -18,7 +18,7 @@ export default function WorkerCategories() {
           </h2>
           <p className="mt-4 text-lg text-ink-700 text-pretty">
             Workers are certified across these categories and matched to
-            employer needs throughout Greater Accra.
+            employer needs throughout Ghana.
           </p>
         </div>
 

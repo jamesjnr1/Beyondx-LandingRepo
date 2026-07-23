@@ -28,7 +28,7 @@ function ActiveReferralCard({ code, referrals = 0 }: { code: string; referrals?:
   const shown = url.replace(/^https:\/\//, '')
   const earned = referrals * REWARD
 
-  const message = `Join me on BeyondX and find paid work in Greater Accra. Sign up here: ${url}`
+  const message = `Join me on BeyondX and find paid work in Ghana. Sign up here: ${url}`
 
   const copy = async () => {
     setFailed(false)

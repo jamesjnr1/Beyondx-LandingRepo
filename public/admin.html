@@ -448,7 +448,7 @@ function showMoreHtml(remaining,onclick){
 function login(){
   pass=document.getElementById('adminPass').value;
   Promise.all([fetch(API+'/admin/all',{headers:{'x-admin-password':pass}}).then(r=>{if(!r.ok)throw new Error();return r.json();}),fetch(API+'/admin/workers',{headers:{'x-admin-password':pass}}).then(r=>r.json()),fetch(API+'/admin/sms-logs',{headers:{'x-admin-password':pass}}).then(r=>r.json()).catch(()=>({logs:[]}))])
-  .then(([td,wd,sd])=>{tasks=td.tasks;workers=wd.workers||[];smsLogs=sd.logs||[];document.getElementById('loginScreen').style.display='none';document.getElementById('app').style.display='flex';checkSmsBadge();inBadge();render();})
+  .then(([td,wd,sd])=>{tasks=td.tasks;workers=wd.workers||[];smsLogs=sd.logs||[];loadEmployers();document.getElementById('loginScreen').style.display='none';document.getElementById('app').style.display='flex';checkSmsBadge();inBadge();render();})
   .catch(()=>document.getElementById('err').style.display='block');
 }
 async function load(){
@@ -536,7 +536,9 @@ function ro(){
   const ac=tasks.filter(t=>t.status==='accepted');
   const rev=co.reduce((s,t)=>s+parseFloat(t.pay),0);
   const pend=py.reduce((s,t)=>s+parseFloat(t.pay),0);
-  const uniq=[...new Set(tasks.map(t=>t.employerId))].length;
+  const withTasks=new Set(tasks.map(t=>t.employerId));
+  employers.forEach(e=>withTasks.add(e.id||e.employerId));
+  const uniq=withTasks.size;
   document.getElementById('sg').innerHTML=`
     <div class="sc dk"><div class="sc-l">Total Tasks</div><div class="sc-v">${tasks.length}</div><div class="sc-s">${co.length} completed &middot; ${op.length} open</div></div>
     <div class="sc"><div class="sc-l">Revenue</div><div class="sc-v">GH&#8373; ${rev.toFixed(0)}</div><div class="sc-s">GH&#8373; ${(rev*.15).toFixed(0)} platform fees</div></div>
@@ -683,9 +685,27 @@ function rw(){
   document.getElementById('wtMore').innerHTML=showMoreHtml(list.length-wtShown,'wtShown+=20;rw();');
 }
 function wSearchInput(){wtShown=20;rw();}
+// Employers come from the backend's own list, not from whoever happens to have
+// posted a task — otherwise anyone who signed up but never dispatched is invisible.
+let employers=[];
+async function loadEmployers(){
+  try{
+    const d=await fetch(API+'/admin/employers',{headers:{'x-admin-password':pass}}).then(r=>r.json());
+    employers=d.employers||[];
+  }catch(e){ employers=[]; }
+  render();
+  if(document.getElementById('sec-employers')?.classList.contains('on')) re();
+}
+
 function re(){
   const q=(document.getElementById('eSearch')?.value||'').toLowerCase();
-  let emps=[...new Map(tasks.filter(t=>t.employer).map(t=>[t.employerId,{...t.employer,eid:t.employerId}])).values()];
+  // Start from every registered employer, then attach whatever tasks they have.
+  const byId=new Map(employers.map(e=>[e.id||e.employerId,{...e,eid:e.id||e.employerId}]));
+  // Include any employer seen on a task but missing from the list, so nothing is lost.
+  tasks.filter(t=>t.employer).forEach(t=>{
+    if(!byId.has(t.employerId)) byId.set(t.employerId,{...t.employer,eid:t.employerId});
+  });
+  let emps=[...byId.values()];
   if(q)emps=emps.filter(e=>(e.orgName+' '+(e.phone||'')).toLowerCase().includes(q));
   document.getElementById('ec').textContent=emps.length+' registered';
   const shown=emps.slice(0,etShown);

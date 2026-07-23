@@ -22,7 +22,7 @@ export default function Footer() {
             <Logo tone="dark" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-700/70 text-pretty">
               Connecting verified, skill-matched workers rebuilding their lives
-              with employers across Greater Accra.
+              with employers across Ghana.
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               {socials.map(({ icon: Icon, href, label }) => (
