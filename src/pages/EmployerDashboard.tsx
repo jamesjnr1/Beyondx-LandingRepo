@@ -4,6 +4,7 @@ import DashboardHeader from './DashboardHeader'
 import ProfileModal from '../components/ProfileModal'
 import Toast, { type ToastMsg } from '../components/Toast'
 import SupportPanel from '../components/SupportPanel'
+import LiveLocation from '../components/LiveLocation'
 import { tasks as tasksApi, workers as workersApi, employers as employersApi, contact, session, ApiError, type Task, type Worker, type Employer } from '../lib/api'
 import { DISPATCH_ENABLED, DISPATCH_PAUSED_MESSAGE } from '../lib/config'
 import { categories, remoteCategories, allCategories } from '../data'
@@ -314,6 +315,7 @@ export default function EmployerDashboard() {
                       )}
                     </div>
                   </div>
+                  {t.status === 'accepted' && <LiveLocation taskId={t.id} />}
                   {s.note && <p className="mt-3 flex items-start gap-2 border-t border-ink-900/10 pt-3 text-xs leading-relaxed text-ink-700"><Info size={13} aria-hidden="true" className="mt-0.5 shrink-0 text-clay-500" /> {s.note}</p>}
                 </div>
               )
