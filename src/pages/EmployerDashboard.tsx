@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { ChevronRight, Star, Send, Phone, Plus, X, ShieldCheck, CircleCheck, Info, RefreshCw, AlertCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Star, Send, Phone, Plus, X, ShieldCheck, CircleCheck, Info, RefreshCw, AlertCircle } from 'lucide-react'
 import DashboardHeader from './DashboardHeader'
 import ProfileModal from '../components/ProfileModal'
 import Toast, { type ToastMsg } from '../components/Toast'
 import SupportPanel from '../components/SupportPanel'
 import { tasks as tasksApi, workers as workersApi, employers as employersApi, contact, session, ApiError, type Task, type Worker, type Employer } from '../lib/api'
 import { DISPATCH_ENABLED, DISPATCH_PAUSED_MESSAGE } from '../lib/config'
+import { categories } from '../data'
 
 const cedis = (n?: number | string) => `GH\u20b5 ${Number(n || 0).toLocaleString()}`
 const wName = (w: Worker) => (w.fullName as string) || (w.name as string) || 'Worker'
@@ -87,6 +88,7 @@ function Skeleton() {
 
 export default function EmployerDashboard() {
   const [tab, setTab] = useState<'hire' | 'post' | 'history' | 'support'>('hire')
+  const [pickedCategory, setPickedCategory] = useState<string | null>(null)
   const [viewing, setViewing] = useState<Worker | null>(null)
   const [dispatching, setDispatching] = useState<Worker | null>(null)
   const [rating, setRating] = useState<Task | null>(null)
@@ -178,29 +180,104 @@ export default function EmployerDashboard() {
                 </p>
               </div>
             )}
-            {loading ? <Skeleton /> : workerList.length ? (
-              <ul className="divide-y divide-ink-900/10 overflow-hidden rounded-2xl bg-cream-50 shadow-sm ring-1 ring-ink-900/5">
-                {workerList.map((w) => (
-                  <li key={String(w.id)}>
-                    <button onClick={() => setViewing(w)} aria-label={`View ${wName(w)}'s profile`}
-                      className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-forest-600/5 focus:outline-none focus-visible:bg-forest-600/5 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest-600/40 sm:px-5">
-                      {w.photoUrl ? <img src={w.photoUrl as string} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
-                        : <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-forest-600 text-sm font-bold text-cream-50">{wInitials(w)}</span>}
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-serif text-base font-medium text-ink-900">{wName(w)}</span>
-                        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-700">
-                          {w.rating && Number(w.rating) > 0 ? <span className="inline-flex items-center gap-0.5"><Star size={12} aria-hidden="true" className="fill-forest-600 text-forest-600" /> {Number(w.rating).toFixed(1)}</span> : <span>New worker</span>}
-                          {wSkills(w).length ? <span>· {wSkills(w).slice(0, 2).join(', ')}</span> : null}
-                          {w.isBusy ? <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">On a job</span> : null}
-                        </span>
-                      </span>
-                      <span className="hidden shrink-0 text-sm font-medium text-forest-700 sm:inline">View profile</span>
-                      <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-ink-700" />
+
+            {/* Step 1 — what needs doing. Workers are then filtered to that work. */}
+            {!pickedCategory ? (
+              <>
+                <h2 className="font-serif text-xl font-medium text-ink-900">What do you need done?</h2>
+                <p className="mt-1 text-sm text-ink-700">
+                  Choose the type of work and we&rsquo;ll show you the workers certified for it.
+                </p>
+                <ul className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {categories.map((c) => {
+                    const Icon = c.icon
+                    const count = workerList.filter((w) => wSkills(w).includes(c.title)).length
+                    return (
+                      <li key={c.title}>
+                        <button
+                          onClick={() => setPickedCategory(c.title)}
+                          aria-label={`${c.title} — ${count} worker${count === 1 ? '' : 's'} available`}
+                          className="flex h-full w-full flex-col rounded-xl bg-cream-50 p-4 text-left shadow-sm ring-1 ring-ink-900/5 transition-all hover:ring-forest-600/40 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40"
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-forest-600/10 text-forest-600">
+                              <Icon size={18} aria-hidden="true" />
+                            </span>
+                            <span className="font-serif text-base font-medium leading-snug text-ink-900">{c.title}</span>
+                          </span>
+                          <span className="mt-2 block text-xs leading-relaxed text-ink-700">{c.description}</span>
+                          <span className="mt-3 flex items-center justify-between border-t border-ink-900/10 pt-2.5">
+                            <span className="text-sm font-semibold text-ink-900">
+                              {cedis(c.rate)}
+                              <span className="ml-1 text-xs font-normal text-ink-700">{c.rateUnit || 'per day'}</span>
+                            </span>
+                            <span className="text-xs text-ink-700">
+                              {count} worker{count === 1 ? '' : 's'}
+                            </span>
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
+            ) : (
+              <>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <button
+                      onClick={() => setPickedCategory(null)}
+                      className="mb-1.5 flex items-center gap-1 text-sm font-medium text-forest-700 hover:underline"
+                    >
+                      <ChevronLeft size={15} aria-hidden="true" /> All work types
                     </button>
-                  </li>
-                ))}
-              </ul>
-            ) : <Empty text="No workers available yet." />}
+                    <h2 className="font-serif text-xl font-medium text-ink-900">{pickedCategory}</h2>
+                  </div>
+                  {(() => {
+                    const cat = categories.find((c) => c.title === pickedCategory)
+                    return cat ? (
+                      <span className="shrink-0 rounded-xl bg-forest-600/10 px-4 py-2 text-sm font-semibold text-forest-800">
+                        {cedis(cat.rate)}{' '}
+                        <span className="font-normal text-forest-700">{cat.rateUnit || 'per day'}</span>
+                      </span>
+                    ) : null
+                  })()}
+                </div>
+
+                {loading ? <div className="mt-5"><Skeleton /></div> : (() => {
+                  const matches = workerList.filter((w) => wSkills(w).includes(pickedCategory))
+                  return matches.length ? (
+                    <ul className="mt-5 divide-y divide-ink-900/10 overflow-hidden rounded-2xl bg-cream-50 shadow-sm ring-1 ring-ink-900/5">
+                      {matches.map((w) => (
+                        <li key={String(w.id)}>
+                          <button onClick={() => setViewing(w)} aria-label={`View ${wName(w)}'s profile`}
+                            className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-forest-600/5 focus:outline-none focus-visible:bg-forest-600/5 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest-600/40 sm:px-5">
+                            {w.photoUrl ? <img src={w.photoUrl as string} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
+                              : <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-forest-600 text-sm font-bold text-cream-50">{wInitials(w)}</span>}
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate font-serif text-base font-medium text-ink-900">{wName(w)}</span>
+                              <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-700">
+                                {w.rating && Number(w.rating) > 0
+                                  ? <span className="inline-flex items-center gap-0.5"><Star size={12} aria-hidden="true" className="fill-forest-600 text-forest-600" /> {Number(w.rating).toFixed(1)}</span>
+                                  : <span>New worker</span>}
+                                <span>· {Number(w.tasksCompleted ?? 0)} task{Number(w.tasksCompleted ?? 0) === 1 ? '' : 's'} completed</span>
+                                {w.isBusy ? <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">On a job</span> : null}
+                              </span>
+                            </span>
+                            <span className="hidden shrink-0 text-sm font-medium text-forest-700 sm:inline">View profile</span>
+                            <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-ink-700" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="mt-5">
+                      <Empty text={`No workers are certified for ${pickedCategory} yet. Post a task instead and we'll match someone as soon as they join.`} />
+                    </div>
+                  )
+                })()}
+              </>
+            )}
           </div>
         )}
 
@@ -250,7 +327,7 @@ export default function EmployerDashboard() {
       <Toast toast={toast} onClose={() => setToast(null)} />
 
       {viewing && <WorkerProfileModal worker={viewing} onClose={() => setViewing(null)} onDispatch={() => { const w = viewing; setViewing(null); setDispatching(w) }} />}
-      {dispatching && DISPATCH_ENABLED && <DispatchModal worker={dispatching} onClose={() => setDispatching(null)} onDone={afterDispatch} onError={(m) => setToast({ id: Date.now(), kind: 'info', title: 'Dispatch failed', detail: m })} />}
+      {dispatching && DISPATCH_ENABLED && <DispatchModal worker={dispatching} category={pickedCategory} onClose={() => setDispatching(null)} onDone={afterDispatch} onError={(m) => setToast({ id: Date.now(), kind: 'info', title: 'Dispatch failed', detail: m })} />}
       {rating && <RateModal task={rating} onClose={() => setRating(null)} onDone={afterConfirm} onError={(m) => setToast({ id: Date.now(), kind: 'info', title: 'Could not confirm', detail: m })} />}
       {editing && profile !== undefined && (
         <ProfileModal
@@ -381,15 +458,18 @@ function WorkerProfileModal({ worker, onClose, onDispatch }: { worker: Worker; o
   )
 }
 
-function DispatchModal({ worker, onClose, onDone, onError }: { worker: Worker; onClose: () => void; onDone: () => void; onError: (m: string) => void }) {
+function DispatchModal({ worker, category, onClose, onDone, onError }: { worker: Worker; category?: string | null; onClose: () => void; onDone: () => void; onError: (m: string) => void }) {
   useEsc(onClose)
   const [days, setDays] = useState(1)
   const [location, setLocation] = useState('')
-  const [taskType, setTaskType] = useState(wSkills(worker)[0] || 'General Task')
+  const [taskType, setTaskType] = useState(category || wSkills(worker)[0] || 'General Task')
   const [payRef, setPayRef] = useState('')
   const [method, setMethod] = useState('')
   const [busy, setBusy] = useState(false)
-  const pay = wCharge(worker) * days
+  const cat = categories.find((c) => c.title === taskType)
+  // BeyondX sets a standard rate per work type — not per worker.
+  const rate = cat ? cat.rate : wCharge(worker)
+  const pay = rate * days
   const duration = days === 0.5 ? 'Half Day' : days === 1 ? '1 Day' : `${days} Days`
 
   const submit = async () => {
@@ -416,7 +496,12 @@ function DispatchModal({ worker, onClose, onDone, onError }: { worker: Worker; o
         <div className="space-y-3">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-ink-700">Task type</span>
-            <input value={taskType} onChange={(e) => setTaskType(e.target.value)} className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
+            <select value={taskType} onChange={(e) => setTaskType(e.target.value)} className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30">
+              {categories.map((c) => <option key={c.title}>{c.title}</option>)}
+            </select>
+            <span className="mt-1 block text-xs text-ink-700">
+              Standard rate {cedis(rate)} {cat?.rateUnit || 'per day'}
+            </span>
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-ink-700">Location</span>
@@ -431,7 +516,12 @@ function DispatchModal({ worker, onClose, onDone, onError }: { worker: Worker; o
         </div>
 
         <div className="mt-4 flex items-center justify-between rounded-xl bg-forest-600/5 p-4 ring-1 ring-forest-600/15">
-          <span className="text-sm text-ink-700">Amount to pay</span>
+          <span className="text-sm text-ink-700">
+            Amount to pay
+            <span className="mt-0.5 block text-xs text-ink-700/80">
+              {cedis(rate)} {cat?.rateUnit || 'per day'} &times; {days === 0.5 ? 'half day' : `${days} day${days === 1 ? '' : 's'}`}
+            </span>
+          </span>
           <span className="font-serif text-lg font-semibold text-ink-900">{cedis(pay)}</span>
         </div>
 
@@ -534,11 +624,14 @@ function RateModal({ task, onClose, onDone, onError }: { task: Task; onClose: ()
 }
 
 function PostTask({ onDone }: { onDone: (msg: string) => void }) {
-  const [taskType, setTaskType] = useState('')
+  const [taskType, setTaskType] = useState(categories[0].title)
   const [description, setDescription] = useState('')
   const [location, setLocation] = useState('')
   const [duration, setDuration] = useState('1 Day')
-  const [pay, setPay] = useState('')
+  const cat = categories.find((c) => c.title === taskType)
+  const rate = cat ? cat.rate : 0
+  const days = duration === 'Half Day' ? 0.5 : parseFloat(duration) || 1
+  const pay = String(rate * days)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
@@ -547,7 +640,7 @@ function PostTask({ onDone }: { onDone: (msg: string) => void }) {
     setErr(null); setBusy(true)
     try {
       await tasksApi.create({ taskType, description, location, duration, pay: parseFloat(pay) || 0 })
-      setTaskType(''); setDescription(''); setLocation(''); setPay('')
+      setDescription(''); setLocation('')
       onDone(`"${taskType}" is now open for workers to accept.`)
     } catch (e) {
       setErr(e instanceof ApiError ? e.message : 'Please try again.')
@@ -562,14 +655,27 @@ function PostTask({ onDone }: { onDone: (msg: string) => void }) {
       <div className="rounded-2xl bg-cream-50 p-6 shadow-sm ring-1 ring-ink-900/5">
         <h2 className="mb-4 font-serif text-xl font-medium text-ink-900">Post a new task</h2>
         <div className="space-y-3">
-          <label className="block"><span className="mb-1 block text-xs font-medium text-ink-700">Task type</span><input value={taskType} onChange={(e) => setTaskType(e.target.value)} placeholder="e.g. Facility & Cleaning" className={inp} /></label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-ink-700">Task type</span>
+            <select value={taskType} onChange={(e) => setTaskType(e.target.value)} className={inp}>
+              {categories.map((c) => <option key={c.title}>{c.title}</option>)}
+            </select>
+          </label>
           <label className="block"><span className="mb-1 block text-xs font-medium text-ink-700">Description</span><input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What needs doing" className={inp} /></label>
           <label className="block"><span className="mb-1 block text-xs font-medium text-ink-700">Location</span><input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Tema" className={inp} /></label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block"><span className="mb-1 block text-xs font-medium text-ink-700">Duration</span>
               <select value={duration} onChange={(e) => setDuration(e.target.value)} className={inp}><option>Half Day</option><option>1 Day</option><option>2 Days</option><option>3 Days</option><option>5 Days</option></select>
             </label>
-            <label className="block"><span className="mb-1 block text-xs font-medium text-ink-700">Pay (GH₵)</span><input type="number" value={pay} onChange={(e) => setPay(e.target.value)} placeholder="120" className={inp} /></label>
+            <div className="block">
+              <span className="mb-1 block text-xs font-medium text-ink-700">Pay (GH₵)</span>
+              <div className="flex h-[42px] items-center rounded-xl bg-forest-600/5 px-3 text-sm font-semibold text-ink-900 ring-1 ring-forest-600/15">
+                {cedis(pay)}
+              </div>
+              <span className="mt-1 block text-xs text-ink-700">
+                Standard rate {cedis(rate)} {cat?.rateUnit || 'per day'}
+              </span>
+            </div>
           </div>
           {err && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{err}</p>}
           <button onClick={submit} disabled={busy} className="flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">

@@ -15,6 +15,10 @@ export interface Category {
   description: string
   image: string
   tasks: string[]
+  /** Standard BeyondX rate in GH₵. */
+  rate: number
+  /** What the rate covers, when it is not simply a day's work. */
+  rateUnit?: string
 }
 
 export const categories: Category[] = [
@@ -24,6 +28,7 @@ export const categories: Category[] = [
     description: 'Office, school, and hospital cleaning plus drain clearing.',
     image: '/categories/general-labour.jpg',
     tasks: ['Office cleaning', 'School compound sweeping', 'Hospital ward cleaning', 'Gutter & drain clearing'],
+    rate: 100,
   },
   {
     icon: Truck,
@@ -31,13 +36,15 @@ export const categories: Category[] = [
     description: 'Warehouse, port, and market goods handling.',
     image: '/categories/logistics.jpg',
     tasks: ['Warehouse stock sorting', 'Goods offloading — Tema Port', 'Supermarket shelf stocking', 'Market porter'],
+    rate: 90,
   },
   {
     icon: PaintRoller,
-    title: 'Maintenance & Repairs',
-    description: 'Painting, tiling, plumbing support, and site labour.',
+    title: 'Construction, Maintenance & Repairs',
+    description: 'Construction, painting, tiling, plumbing support, and site labour.',
     image: '/categories/painting.jpg',
     tasks: ['Painting & touch-up work', 'Tiling assistance', 'Plumbing support', 'Building site labourer'],
+    rate: 180,
   },
   {
     icon: ShoppingCart,
@@ -45,6 +52,7 @@ export const categories: Category[] = [
     description: 'Setup, catering support, and venue preparation.',
     image: '/categories/hospitality.jpg',
     tasks: ['Chair & table setup', 'Catering assistant', 'Food serving at events', 'Venue decoration setup'],
+    rate: 100,
   },
   {
     icon: Leaf,
@@ -52,6 +60,8 @@ export const categories: Category[] = [
     description: 'Farming, landscaping, and green space upkeep.',
     image: '/categories/landscaping.jpg',
     tasks: ['Farm weeding & harvesting', 'Grass cutting & landscaping', 'Tree planting', 'Community garden maintenance'],
+    rate: 120,
+    rateUnit: 'per 0.5 acre',
   },
   {
     icon: Wrench,
@@ -59,6 +69,7 @@ export const categories: Category[] = [
     description: 'Shop, packing, and cold store assistance.',
     image: '/categories/electrical.jpg',
     tasks: ['Shop attendant', 'Packing and bagging', 'Loading & offloading trucks', 'Cold store assistant'],
+    rate: 80,
   },
   {
     icon: Hammer,
@@ -66,6 +77,7 @@ export const categories: Category[] = [
     description: 'Waste collection and public space maintenance.',
     image: '/categories/construction.jpg',
     tasks: ['Neighbourhood waste collection', 'School painting', 'Street drain maintenance', 'Public park upkeep'],
+    rate: 140,
   },
 ]
 
