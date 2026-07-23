@@ -5,6 +5,7 @@ import { useAuth, type AuthView } from './AuthContext'
 import { auth, session, referral, ApiError } from '../../lib/api'
 import OnboardingQuestions from './OnboardingQuestions'
 import * as v from '../../lib/validate'
+import { categories, remoteCategories } from '../../data'
 
 const REGIONS = [
   'Greater Accra', 'Ashanti', 'Western', 'Central', 'Eastern',
@@ -15,11 +16,8 @@ const FACILITIES = [
   'Kumasi Central Prison', 'James Fort Prison', 'Ankaful Maximum Security Prison',
   'Sunyani Central Prison', 'Ho Central Prison', 'Tamale Central Prison',
 ]
-const SKILLS = [
-  'Facility & Cleaning', 'Logistics & Delivery', 'Maintenance & Repairs',
-  'Event & Hospitality', 'Agriculture & Environment', 'Retail & Trade',
-  'Community Services', 'Other',
-]
+const FIELD_SKILLS = categories.map((c) => c.title)
+const REMOTE_SKILLS = remoteCategories.map((c) => c.title)
 const RELATIONSHIPS = [
   'Family Member', 'Friend', 'Former Employer',
   'Community/Religious Leader', 'Case Worker / Social Worker', 'Other',
@@ -277,6 +275,11 @@ function WorkerRegister() {
   const { open } = useAuth()
   const [step, setStep] = useState(1)
   const [f, setF] = useState({ name: '', phone: '', facility: '', gName: '', gPhone: '', relationship: '', pin: '' })
+  // Remote work is not offered on accounts that name a facility.
+  const remoteLocked = Boolean(f.facility)
+  useEffect(() => {
+    if (remoteLocked) setSkills((prev) => prev.filter((sk) => !REMOTE_SKILLS.includes(sk)))
+  }, [remoteLocked])
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({})
   const [skills, setSkills] = useState<string[]>([])
   const set = (k: keyof typeof f) => (v: string) => setF({ ...f, [k]: v })
@@ -359,16 +362,37 @@ function WorkerRegister() {
           <div>
             <p className="mb-1 text-sm font-medium text-ink-800">Your Skills</p>
             <p className="mb-3 text-xs text-ink-700">Select all that apply</p>
+
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-clay-500">On the field</p>
             <div className="grid grid-cols-2 gap-2">
-              {SKILLS.map((s) => {
-                const active = skills.includes(s)
+              {FIELD_SKILLS.map((sk) => {
+                const active = skills.includes(sk)
                 return (
-                  <button type="button" key={s} onClick={() => toggleSkill(s)} className={`rounded-lg border px-3 py-2 text-left text-xs font-medium transition-colors ${active ? 'border-forest-600 bg-forest-600/10 text-forest-700' : 'border-ink-900/15 text-ink-700 hover:border-forest-500/50'}`}>
-                    {s}
+                  <button type="button" key={sk} onClick={() => toggleSkill(sk)} className={`rounded-lg border px-3 py-2 text-left text-xs font-medium transition-colors ${active ? 'border-forest-600 bg-forest-600/10 text-forest-700' : 'border-ink-900/15 text-ink-700 hover:border-forest-500/50'}`}>
+                    {sk}
                   </button>
                 )
               })}
             </div>
+
+            <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-clay-500">Remote</p>
+            {remoteLocked ? (
+              <p className="rounded-lg bg-ink-900/5 p-3 text-xs leading-relaxed text-ink-700">
+                Remote work isn&rsquo;t open on your account yet. You can take on any of the
+                on-the-field work above, and we&rsquo;ll be in touch as more options become available.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {REMOTE_SKILLS.map((sk) => {
+                  const active = skills.includes(sk)
+                  return (
+                    <button type="button" key={sk} onClick={() => toggleSkill(sk)} className={`rounded-lg border px-3 py-2 text-left text-xs font-medium transition-colors ${active ? 'border-forest-600 bg-forest-600/10 text-forest-700' : 'border-ink-900/15 text-ink-700 hover:border-forest-500/50'}`}>
+                      {sk}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
         {step === 3 && (<>

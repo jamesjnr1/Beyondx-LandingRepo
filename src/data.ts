@@ -6,8 +6,16 @@ import {
   Wrench,
   Sparkles,
   Leaf,
+  Keyboard,
+  Headset,
+  Megaphone,
+  Languages,
+  Search,
+  CalendarClock,
   type LucideIcon,
 } from 'lucide-react'
+
+export type WorkMode = 'field' | 'remote'
 
 export interface Category {
   icon: LucideIcon
@@ -19,6 +27,8 @@ export interface Category {
   rate: number
   /** What the rate covers, when it is not simply a day's work. */
   rateUnit?: string
+  /** On-site work, or work done from anywhere. Defaults to 'field'. */
+  mode?: WorkMode
 }
 
 export const categories: Category[] = [
@@ -80,6 +90,69 @@ export const categories: Category[] = [
     rate: 140,
   },
 ]
+
+export const remoteCategories: Category[] = [
+  {
+    icon: Keyboard,
+    title: 'Data Entry & Digitisation',
+    description: 'Typing records, digitising paper files, and cleaning up spreadsheets.',
+    image: '/categories/general-labour.jpg',
+    tasks: ['Typing records into spreadsheets', 'Digitising paper files', 'Product catalogue entry', 'Cleaning up customer lists'],
+    rate: 90,
+    mode: 'remote',
+  },
+  {
+    icon: Headset,
+    title: 'Customer Support',
+    description: 'Answering calls, WhatsApp, and messages for small businesses.',
+    image: '/categories/hospitality.jpg',
+    tasks: ['Answering customer calls', 'Replying on WhatsApp Business', 'Order confirmation calls', 'Handling delivery enquiries'],
+    rate: 110,
+    mode: 'remote',
+  },
+  {
+    icon: Megaphone,
+    title: 'Social Media & Content',
+    description: 'Posting, replying to comments, and simple content for local brands.',
+    image: '/categories/logistics.jpg',
+    tasks: ['Scheduling daily posts', 'Replying to comments and DMs', 'Writing product captions', 'Basic photo editing'],
+    rate: 120,
+    mode: 'remote',
+  },
+  {
+    icon: Languages,
+    title: 'Transcription & Translation',
+    description: 'Audio typed up, and translation between English and local languages.',
+    image: '/categories/painting.jpg',
+    tasks: ['Transcribing interviews', 'Twi / Ga / Ewe to English', 'Subtitling short videos', 'Typing up meeting notes'],
+    rate: 100,
+    mode: 'remote',
+  },
+  {
+    icon: Search,
+    title: 'Online Research & Listings',
+    description: 'Finding suppliers, building contact lists, and price checks.',
+    image: '/categories/electrical.jpg',
+    tasks: ['Building supplier lists', 'Competitor price checks', 'Verifying business contacts', 'Collecting market prices'],
+    rate: 100,
+    mode: 'remote',
+  },
+  {
+    icon: CalendarClock,
+    title: 'Virtual Assistance',
+    description: 'Scheduling, reminders, and day-to-day admin for busy owners.',
+    image: '/categories/construction.jpg',
+    tasks: ['Managing a booking diary', 'Sending payment reminders', 'Organising documents', 'Following up on orders'],
+    rate: 130,
+    mode: 'remote',
+  },
+]
+
+/** Every category, field and remote. */
+export const allCategories: Category[] = [...categories, ...remoteCategories]
+
+export const isRemote = (title: string) =>
+  remoteCategories.some((c) => c.title === title)
 
 export interface Step {
   number: string

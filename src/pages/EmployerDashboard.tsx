@@ -6,7 +6,7 @@ import Toast, { type ToastMsg } from '../components/Toast'
 import SupportPanel from '../components/SupportPanel'
 import { tasks as tasksApi, workers as workersApi, employers as employersApi, contact, session, ApiError, type Task, type Worker, type Employer } from '../lib/api'
 import { DISPATCH_ENABLED, DISPATCH_PAUSED_MESSAGE } from '../lib/config'
-import { categories } from '../data'
+import { categories, remoteCategories, allCategories } from '../data'
 
 const cedis = (n?: number | string) => `GH\u20b5 ${Number(n || 0).toLocaleString()}`
 const wName = (w: Worker) => (w.fullName as string) || (w.name as string) || 'Worker'
@@ -77,6 +77,7 @@ function Skeleton() {
 
 export default function EmployerDashboard() {
   const [tab, setTab] = useState<'hire' | 'post' | 'history' | 'support'>('hire')
+  const [workMode, setWorkMode] = useState<'field' | 'remote'>('field')
   const [pickedCategory, setPickedCategory] = useState<string | null>(null)
   const [viewing, setViewing] = useState<Worker | null>(null)
   const [dispatching, setDispatching] = useState<Worker | null>(null)
@@ -170,8 +171,23 @@ export default function EmployerDashboard() {
                 <p className="mt-1 text-sm text-ink-700">
                   Choose the type of work and we&rsquo;ll show you the workers certified for it.
                 </p>
+
+                <div className="mt-4 inline-flex rounded-full bg-ink-900/5 p-1" role="tablist" aria-label="Work location">
+                  {([['field', 'On the field'], ['remote', 'Remote']] as const).map(([id, label]) => (
+                    <button
+                      key={id}
+                      role="tab"
+                      aria-selected={workMode === id}
+                      onClick={() => setWorkMode(id)}
+                      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${workMode === id ? 'bg-cream-50 text-ink-900 shadow-sm' : 'text-ink-700 hover:text-ink-900'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
                 <ul className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {categories.map((c) => {
+                  {(workMode === 'field' ? categories : remoteCategories).map((c) => {
                     const Icon = c.icon
                     const count = workerList.filter((w) => wSkills(w).includes(c.title)).length
                     return (
@@ -339,7 +355,7 @@ export default function EmployerDashboard() {
 function WorkerProfileModal({ worker, category, onClose, onDispatch }: { worker: Worker; category?: string | null; onClose: () => void; onDispatch: () => void }) {
   useEsc(onClose)
   const skills = wSkills(worker)
-  const rateFor = (title: string) => categories.find((c) => c.title === title)
+  const rateFor = (title: string) => allCategories.find((c) => c.title === title)
   const picked = category ? rateFor(category) : undefined
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/50 p-4" onClick={onClose}>
@@ -465,7 +481,7 @@ function DispatchModal({ worker, category, onClose, onDone, onError }: { worker:
   const [payRef, setPayRef] = useState('')
   const [method, setMethod] = useState('')
   const [busy, setBusy] = useState(false)
-  const cat = categories.find((c) => c.title === taskType)
+  const cat = allCategories.find((c) => c.title === taskType)
   // BeyondX sets a standard rate per work type — not per worker.
   const rate = cat ? cat.rate : wCharge(worker)
   const pay = rate * days
@@ -475,7 +491,7 @@ function DispatchModal({ worker, category, onClose, onDone, onError }: { worker:
     if (!payRef.trim() || !method || busy) return
     setBusy(true)
     try {
-      await tasksApi.dispatch({ worker, taskType, location, duration, pay, paymentRef: `${method} ${payRef.trim()}` })
+      await tasksApi.dispatch({ worker, taskType, location: cat?.mode === 'remote' ? 'Remote' : location, duration, pay, paymentRef: `${method} ${payRef.trim()}` })
       onDone()
     } catch (e) {
       onError(e instanceof ApiError ? e.message : 'Please try again.')
@@ -496,16 +512,22 @@ function DispatchModal({ worker, category, onClose, onDone, onError }: { worker:
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-ink-700">Task type</span>
             <select value={taskType} onChange={(e) => setTaskType(e.target.value)} className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30">
-              {categories.map((c) => <option key={c.title}>{c.title}</option>)}
+              {allCategories.map((c) => <option key={c.title}>{c.title}</option>)}
             </select>
             <span className="mt-1 block text-xs text-ink-700">
               Standard rate {cedis(rate)} {cat?.rateUnit || 'per day'}
             </span>
           </label>
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-ink-700">Location</span>
-            <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Tema" className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
-          </label>
+          {cat?.mode === 'remote' ? (
+            <p className="rounded-xl bg-forest-600/5 p-3 text-xs leading-relaxed text-ink-700 ring-1 ring-forest-600/15">
+              This is remote work — the worker completes it from wherever they are, so no job site is needed.
+            </p>
+          ) : (
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-ink-700">Location</span>
+              <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Tema" className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
+            </label>
+          )}
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-ink-700">Duration</span>
             <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30">
@@ -623,11 +645,11 @@ function RateModal({ task, onClose, onDone, onError }: { task: Task; onClose: ()
 }
 
 function PostTask({ onDone }: { onDone: (msg: string) => void }) {
-  const [taskType, setTaskType] = useState(categories[0].title)
+  const [taskType, setTaskType] = useState(allCategories[0].title)
   const [description, setDescription] = useState('')
   const [location, setLocation] = useState('')
   const [duration, setDuration] = useState('1 Day')
-  const cat = categories.find((c) => c.title === taskType)
+  const cat = allCategories.find((c) => c.title === taskType)
   const rate = cat ? cat.rate : 0
   const days = duration === 'Half Day' ? 0.5 : parseFloat(duration) || 1
   const pay = String(rate * days)
@@ -635,10 +657,11 @@ function PostTask({ onDone }: { onDone: (msg: string) => void }) {
   const [err, setErr] = useState<string | null>(null)
 
   const submit = async () => {
-    if (!taskType || !location || busy) return
+    if (!taskType || busy) return
+    if (cat?.mode !== 'remote' && !location) return
     setErr(null); setBusy(true)
     try {
-      await tasksApi.create({ taskType, description, location, duration, pay: parseFloat(pay) || 0 })
+      await tasksApi.create({ taskType, description, location: cat?.mode === 'remote' ? 'Remote' : location, duration, pay: parseFloat(pay) || 0 })
       setDescription(''); setLocation('')
       onDone(`"${taskType}" is now open for workers to accept.`)
     } catch (e) {
@@ -657,11 +680,18 @@ function PostTask({ onDone }: { onDone: (msg: string) => void }) {
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-ink-700">Task type</span>
             <select value={taskType} onChange={(e) => setTaskType(e.target.value)} className={inp}>
-              {categories.map((c) => <option key={c.title}>{c.title}</option>)}
+              <optgroup label="On the field">
+                {categories.map((c) => <option key={c.title}>{c.title}</option>)}
+              </optgroup>
+              <optgroup label="Remote">
+                {remoteCategories.map((c) => <option key={c.title}>{c.title}</option>)}
+              </optgroup>
             </select>
           </label>
           <label className="block"><span className="mb-1 block text-xs font-medium text-ink-700">Description</span><input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What needs doing" className={inp} /></label>
-          <label className="block"><span className="mb-1 block text-xs font-medium text-ink-700">Location</span><input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Tema" className={inp} /></label>
+          {cat?.mode === 'remote' ? null : (
+            <label className="block"><span className="mb-1 block text-xs font-medium text-ink-700">Location</span><input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Tema" className={inp} /></label>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <label className="block"><span className="mb-1 block text-xs font-medium text-ink-700">Duration</span>
               <select value={duration} onChange={(e) => setDuration(e.target.value)} className={inp}><option>Half Day</option><option>1 Day</option><option>2 Days</option><option>3 Days</option><option>5 Days</option></select>
