@@ -4,9 +4,11 @@
 
 /**
  * Dispatch is paused while we build up the employer side of the marketplace.
- * Set this to `true` to turn direct dispatch back on for everyone.
+ *
+ * TEMPORARILY ON for testing — set back to `false` before real employers use
+ * the site, or they will be able to dispatch workers for real.
  */
-export const DISPATCH_ENABLED = false
+export const DISPATCH_ENABLED = true
 
 /** Shown wherever dispatch would normally be offered. */
 export const DISPATCH_PAUSED_MESSAGE =
