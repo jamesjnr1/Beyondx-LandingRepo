@@ -243,41 +243,88 @@ function WorkerProfileModal({ worker, onClose, onDispatch }: { worker: Worker; o
   const skills = wSkills(worker)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/50 p-4" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="wp-title" className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-cream-50 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="relative rounded-t-2xl bg-forest-700 px-6 pb-6 pt-6 text-center">
-          <button onClick={onClose} aria-label="Close profile" className="absolute right-4 top-4 rounded-lg p-1 text-cream-50/80 transition-colors hover:bg-cream-50/10 hover:text-cream-50"><X size={18} aria-hidden="true" /></button>
-          {worker.photoUrl ? <img src={worker.photoUrl as string} alt="" className="mx-auto h-20 w-20 rounded-full object-cover ring-2 ring-cream-50/30" />
-            : <span aria-hidden="true" className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-cream-50 font-serif text-2xl font-bold text-forest-700 shadow-md">{wInitials(worker)}</span>}
-          <h2 id="wp-title" className="mt-3 font-serif text-2xl font-medium text-cream-50">{wName(worker)}</h2>
-          <div className="mt-2 flex items-center justify-center gap-2">
-            {worker.rating && Number(worker.rating) > 0 ? <span className="inline-flex items-center gap-1 rounded-full bg-cream-50/15 px-2.5 py-0.5 text-xs font-semibold text-cream-50"><Star size={12} aria-hidden="true" className="fill-cream-50 text-cream-50" /> {Number(worker.rating).toFixed(1)}</span> : null}
-          </div>
-          <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-cream-200/90"><ShieldCheck size={14} aria-hidden="true" /> BeyondX Verified · Certified Worker</p>
-        </div>
-        <div className="grid grid-cols-2 gap-3 border-b border-ink-900/10 p-6">
-          <div className="rounded-xl bg-cream-100 p-4 text-center"><span className="block font-serif text-2xl font-semibold text-ink-900">{Number(worker.tasksCompleted ?? worker.tasks ?? 0)}</span><span className="text-xs text-ink-700">Tasks completed</span></div>
-          <div className="rounded-xl bg-cream-100 p-4 text-center"><span className="block font-serif text-2xl font-semibold text-ink-900">{cedis(wCharge(worker))}</span><span className="text-xs text-ink-700">Rate per day</span></div>
-        </div>
-        <div className="space-y-4 p-6">
-          {worker.phone ? <div><h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-clay-500">Contact</h3><div className="flex items-center gap-2 text-sm text-ink-900"><Phone size={15} aria-hidden="true" className="text-forest-600" /> {worker.phone as string}</div></div> : null}
-          {skills.length ? (
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-clay-500">Certified Skills</h3>
-              <ul className="overflow-hidden rounded-xl ring-1 ring-ink-900/10">
-                {skills.map((s, i) => (
-                  <li key={s} className={`flex items-center gap-3 px-4 py-3 ${i % 2 ? 'bg-cream-100/60' : 'bg-cream-50'}`}>
-                    <CircleCheck size={16} aria-hidden="true" className="shrink-0 text-forest-600" />
-                    <span className="flex-1 text-sm font-medium text-ink-900">{s}</span>
-                    <span className="shrink-0 rounded-full bg-forest-600/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-forest-700">Certified</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+      {/* Fixed height with an internal scroll area: the header and the action
+          button stay put, so the button is never scrolled out of reach. */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="wp-title"
+        className="flex max-h-[88vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-cream-50 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header — compact so more of the profile is visible at a glance */}
+        <div className="relative shrink-0 bg-forest-700 px-6 pb-5 pt-5 text-center">
+          <button onClick={onClose} aria-label="Close profile" className="absolute right-3 top-3 rounded-lg p-1.5 text-cream-50/80 transition-colors hover:bg-cream-50/10 hover:text-cream-50">
+            <X size={18} aria-hidden="true" />
+          </button>
+          {worker.photoUrl ? (
+            <img src={worker.photoUrl as string} alt="" className="mx-auto h-16 w-16 rounded-full object-cover ring-2 ring-cream-50/30" />
+          ) : (
+            <span aria-hidden="true" className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-cream-50 font-serif text-xl font-bold text-forest-700 shadow-md">
+              {wInitials(worker)}
+            </span>
+          )}
+          <h2 id="wp-title" className="mt-2.5 font-serif text-xl font-medium leading-snug text-cream-50">{wName(worker)}</h2>
+          <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-cream-200/90">
+            <ShieldCheck size={13} aria-hidden="true" /> BeyondX Verified · Certified Worker
+          </p>
+          {worker.rating && Number(worker.rating) > 0 ? (
+            <p className="mt-1.5">
+              <span className="inline-flex items-center gap-1 rounded-full bg-cream-50/15 px-2.5 py-0.5 text-xs font-semibold text-cream-50">
+                <Star size={11} aria-hidden="true" className="fill-cream-50 text-cream-50" /> {Number(worker.rating).toFixed(1)}
+              </span>
+            </p>
           ) : null}
         </div>
-        <div className="border-t border-ink-900/10 p-6">
-          <button onClick={onDispatch} disabled={!!worker.isBusy} aria-label={`Dispatch ${wName(worker)}`}
-            className="flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
+
+        {/* Scrollable middle */}
+        <div className="nice-scroll min-h-0 flex-1 overflow-y-auto">
+          <div className="grid grid-cols-2 gap-3 px-6 pt-5">
+            <div className="rounded-xl bg-cream-100 p-3.5 text-center">
+              <span className="block font-serif text-xl font-semibold text-ink-900">{Number(worker.tasksCompleted ?? worker.tasks ?? 0)}</span>
+              <span className="text-xs text-ink-700">Tasks completed</span>
+            </div>
+            <div className="rounded-xl bg-cream-100 p-3.5 text-center">
+              <span className="block font-serif text-xl font-semibold text-ink-900">{cedis(wCharge(worker))}</span>
+              <span className="text-xs text-ink-700">Rate per day</span>
+            </div>
+          </div>
+
+          <div className="space-y-4 px-6 pb-5 pt-5">
+            {worker.phone ? (
+              <div>
+                <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-clay-500">Contact</h3>
+                <a href={`tel:${worker.phone}`} className="inline-flex items-center gap-2 text-sm font-medium text-ink-900 hover:text-forest-700">
+                  <Phone size={15} aria-hidden="true" className="text-forest-600" /> {worker.phone as string}
+                </a>
+              </div>
+            ) : null}
+
+            {skills.length ? (
+              <div>
+                <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-clay-500">Certified Skills</h3>
+                <ul className="overflow-hidden rounded-xl ring-1 ring-ink-900/10">
+                  {skills.map((sk, i) => (
+                    <li key={sk} className={`flex items-center gap-2.5 px-3.5 py-2.5 ${i % 2 ? 'bg-cream-100/60' : 'bg-cream-50'}`}>
+                      <CircleCheck size={15} aria-hidden="true" className="shrink-0 text-forest-600" />
+                      <span className="flex-1 text-sm font-medium text-ink-900">{sk}</span>
+                      <span className="shrink-0 rounded-full bg-forest-600/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-forest-700">Certified</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Action stays pinned */}
+        <div className="shrink-0 border-t border-ink-900/10 bg-cream-50 p-4">
+          <button
+            onClick={onDispatch}
+            disabled={!!worker.isBusy}
+            aria-label={`Dispatch ${wName(worker)}`}
+            className="flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40"
+          >
             <Send size={15} aria-hidden="true" /> {worker.isBusy ? 'Currently on a job' : `Dispatch ${wName(worker).split(' ')[0]}`}
           </button>
         </div>
