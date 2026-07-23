@@ -14,8 +14,22 @@
 //   CONTACT_FROM     verified sender. Until you verify a domain in Resend, the
 //                    shared sender below works for testing.
 
+// Optional:
+//   CONTACT_TO        who receives these emails. Comma-separated for several.
+//                     Defaults to the address below.
+//   CONTACT_REPLY_TO  where replies go. Comma-separated for several.
+//   CONTACT_FROM      verified sender, e.g. "BeyondX <noreply@beyondxco.com>".
+
 const DEFAULT_TO = 'beyondx26@gmail.com'
 const DEFAULT_FROM = 'BeyondX <onboarding@resend.dev>'
+
+// "a@b.com, c@d.com" -> ["a@b.com", "c@d.com"]
+function addresses(value) {
+  return String(value || '')
+    .split(',')
+    .map((a) => a.trim())
+    .filter(Boolean)
+}
 
 function escapeHtml(value) {
   return String(value == null ? '' : value)
@@ -83,6 +97,13 @@ export default async function handler(req, res) {
   ].join('\n')
 
   try {
+    // Replying should reach the person who signed up when we have their email,
+    // then the BeyondX addresses so the team is looped in.
+    const replyTo = [
+      ...(email ? [String(email).trim()] : []),
+      ...addresses(process.env.CONTACT_REPLY_TO),
+    ].filter((a, i, all) => all.indexOf(a) === i)
+
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -91,18 +112,35 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         from: process.env.CONTACT_FROM || DEFAULT_FROM,
-        to: [process.env.CONTACT_TO || DEFAULT_TO],
+        to: addresses(process.env.CONTACT_TO).length
+          ? addresses(process.env.CONTACT_TO)
+          : [DEFAULT_TO],
         subject,
         html,
         text,
-        ...(email ? { reply_to: email } : {}),
+        ...(replyTo.length ? { reply_to: replyTo } : {}),
       }),
     })
 
     const detail = await r.text()
     if (!r.ok) {
       console.error('[contact] Resend responded', r.status, detail.slice(0, 300))
-      return res.status(502).json({ error: `Email provider rejected the message (${r.status}).` })
+      // Surface the provider's own reason — without it, a 403 is undiagnosable.
+      let reason = ''
+      try {
+        const parsed = JSON.parse(detail)
+        reason = parsed?.message || parsed?.error?.message || ''
+      } catch {
+        reason = detail.slice(0, 200)
+      }
+      return res.status(502).json({
+        error: `Email provider rejected the message (${r.status}).`,
+        reason: reason || undefined,
+        hint:
+          r.status === 403
+            ? 'Resend only delivers to your own account email until you verify a sending domain. Verify a domain and set CONTACT_FROM to an address on it, or send to the address your Resend account is registered with.'
+            : undefined,
+      })
     }
 
     return res.status(200).json({ ok: true })
