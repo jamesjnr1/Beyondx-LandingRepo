@@ -8,7 +8,7 @@
  * TEMPORARILY ON for testing — set back to `false` before real employers use
  * the site, or they will be able to dispatch workers for real.
  */
-export const DISPATCH_ENABLED = true
+export const DISPATCH_ENABLED = false
 
 /** Shown wherever dispatch would normally be offered. */
 export const DISPATCH_PAUSED_MESSAGE =
