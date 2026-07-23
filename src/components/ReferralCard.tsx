@@ -1,10 +1,27 @@
 import { useState } from 'react'
 import { Gift, Copy, Check, Share2 } from 'lucide-react'
 import { referral } from '../lib/api'
+import { REFERRALS_ENABLED, REFERRALS_PAUSED_MESSAGE } from '../lib/config'
 
 const REWARD = 20
 
 export default function ReferralCard({ code, referrals = 0 }: { code: string; referrals?: number }) {
+  if (!REFERRALS_ENABLED) {
+    return (
+      <div className="mt-6 overflow-hidden rounded-2xl bg-forest-700/95 p-6 text-cream-50 shadow-sm sm:p-7">
+        <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-cream-50/15 px-3 py-1 text-xs font-medium">
+          <Gift size={14} aria-hidden="true" /> Refer &amp; Earn
+        </span>
+        <h3 className="font-serif text-xl font-medium leading-snug">Coming soon</h3>
+        <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-cream-50/80">{REFERRALS_PAUSED_MESSAGE}</p>
+      </div>
+    )
+  }
+
+  return <ActiveReferralCard code={code} referrals={referrals} />
+}
+
+function ActiveReferralCard({ code, referrals = 0 }: { code: string; referrals?: number }) {
   const [copied, setCopied] = useState(false)
   const [failed, setFailed] = useState(false)
   const url = referral.linkFor(code)
