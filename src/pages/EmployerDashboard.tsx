@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight, Star, Send, Phone, Plus, X, ShieldCheck, CircleCheck, Info, RefreshCw, AlertCircle } from 'lucide-react'
 import DashboardHeader from './DashboardHeader'
 import ProfileModal from '../components/ProfileModal'
@@ -54,17 +54,6 @@ function StarPicker({ value, onChange }: { value: number; onChange: (n: number) 
           <Star size={30} aria-hidden="true" className={i <= value ? 'fill-forest-600 text-forest-600' : 'text-ink-900/20 hover:text-forest-600/40'} />
         </button>
       ))}
-    </div>
-  )
-}
-function Stat({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl bg-cream-50 p-4 shadow-sm ring-1 ring-ink-900/5">
-      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-forest-600/10 text-forest-600">{icon}</span>
-      <span>
-        <span className="block text-lg font-semibold text-ink-900">{value}</span>
-        <span className="block text-xs text-ink-700">{label}</span>
-      </span>
     </div>
   )
 }
@@ -124,7 +113,6 @@ export default function EmployerDashboard() {
 
   const orgName = (profile?.orgName as string) || 'Your organisation'
   const logo = (profile?.logoUrl as string) || undefined
-  const active = taskList.filter((t) => t.status && !['completed', 'employer_confirmed'].includes(t.status))
 
   const afterDispatch = () => {
     setDispatching(null)
@@ -152,13 +140,7 @@ export default function EmployerDashboard() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Stat icon={<img src="/icons/dispatches.png" alt="" className="h-5 w-5 object-contain" />} label="Active dispatches" value={`${active.length}`} />
-          <Stat icon={<img src="/icons/workers.png" alt="" className="h-6 w-6 object-contain" />} label="Workers available" value={`${workerList.length}`} />
-          <Stat icon={<img src="/icons/dispatched.png" alt="" className="h-5 w-5 object-contain" />} label="Total dispatched" value={`${taskList.length}`} />
-        </div>
-
-        <div className="mt-8 flex items-center gap-2 overflow-x-auto border-b border-ink-900/10 pb-px" role="tablist" aria-label="Employer sections">
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-ink-900/10 pb-px" role="tablist" aria-label="Employer sections">
           {([['hire', 'Hire Workers'], ['post', 'Post a Task'], ['history', `Dispatch History (${taskList.length})`], ['support', 'Support']] as const).map(([id, label]) => (
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
               className={`shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40 ${tab === id ? 'border-forest-600 text-forest-700' : 'border-transparent text-ink-700 hover:text-ink-900'}`}>
@@ -326,7 +308,7 @@ export default function EmployerDashboard() {
 
       <Toast toast={toast} onClose={() => setToast(null)} />
 
-      {viewing && <WorkerProfileModal worker={viewing} onClose={() => setViewing(null)} onDispatch={() => { const w = viewing; setViewing(null); setDispatching(w) }} />}
+      {viewing && <WorkerProfileModal worker={viewing} category={pickedCategory} onClose={() => setViewing(null)} onDispatch={() => { const w = viewing; setViewing(null); setDispatching(w) }} />}
       {dispatching && DISPATCH_ENABLED && <DispatchModal worker={dispatching} category={pickedCategory} onClose={() => setDispatching(null)} onDone={afterDispatch} onError={(m) => setToast({ id: Date.now(), kind: 'info', title: 'Dispatch failed', detail: m })} />}
       {rating && <RateModal task={rating} onClose={() => setRating(null)} onDone={afterConfirm} onError={(m) => setToast({ id: Date.now(), kind: 'info', title: 'Could not confirm', detail: m })} />}
       {editing && profile !== undefined && (
@@ -354,9 +336,11 @@ export default function EmployerDashboard() {
   )
 }
 
-function WorkerProfileModal({ worker, onClose, onDispatch }: { worker: Worker; onClose: () => void; onDispatch: () => void }) {
+function WorkerProfileModal({ worker, category, onClose, onDispatch }: { worker: Worker; category?: string | null; onClose: () => void; onDispatch: () => void }) {
   useEsc(onClose)
   const skills = wSkills(worker)
+  const rateFor = (title: string) => categories.find((c) => c.title === title)
+  const picked = category ? rateFor(category) : undefined
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/50 p-4" onClick={onClose}>
       {/* Fixed height with an internal scroll area: the header and the action
@@ -400,9 +384,13 @@ function WorkerProfileModal({ worker, onClose, onDispatch }: { worker: Worker; o
               <span className="block font-serif text-xl font-semibold text-ink-900">{Number(worker.tasksCompleted ?? worker.tasks ?? 0)}</span>
               <span className="text-xs text-ink-700">Tasks completed</span>
             </div>
-            <div className="rounded-xl bg-cream-100 p-3.5 text-center">
-              <span className="block font-serif text-xl font-semibold text-ink-900">{cedis(wCharge(worker))}</span>
-              <span className="text-xs text-ink-700">Rate per day</span>
+            <div className="rounded-xl bg-forest-600/10 p-3.5 text-center">
+              <span className="block font-serif text-xl font-semibold text-ink-900">
+                {picked ? cedis(picked.rate) : '—'}
+              </span>
+              <span className="text-xs text-ink-700">
+                {picked ? `${picked.rateUnit || 'per day'} · ${picked.title.split(' ')[0]}` : 'Standard rate'}
+              </span>
             </div>
           </div>
 
@@ -420,13 +408,24 @@ function WorkerProfileModal({ worker, onClose, onDispatch }: { worker: Worker; o
               <div>
                 <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-clay-500">Certified Skills</h3>
                 <ul className="overflow-hidden rounded-xl ring-1 ring-ink-900/10">
-                  {skills.map((sk, i) => (
-                    <li key={sk} className={`flex items-center gap-2.5 px-3.5 py-2.5 ${i % 2 ? 'bg-cream-100/60' : 'bg-cream-50'}`}>
-                      <CircleCheck size={15} aria-hidden="true" className="shrink-0 text-forest-600" />
-                      <span className="flex-1 text-sm font-medium text-ink-900">{sk}</span>
-                      <span className="shrink-0 rounded-full bg-forest-600/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-forest-700">Certified</span>
-                    </li>
-                  ))}
+                  {skills.map((sk, i) => {
+                    const c = rateFor(sk)
+                    const isPicked = category === sk
+                    return (
+                      <li key={sk} className={`flex items-center gap-2.5 px-3.5 py-2.5 ${isPicked ? 'bg-forest-600/10' : i % 2 ? 'bg-cream-100/60' : 'bg-cream-50'}`}>
+                        <CircleCheck size={15} aria-hidden="true" className="shrink-0 text-forest-600" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-ink-900">{sk}</span>
+                          {c && (
+                            <span className="block text-[11px] text-ink-700">
+                              {cedis(c.rate)} {c.rateUnit || 'per day'}
+                            </span>
+                          )}
+                        </span>
+                        <span className="shrink-0 rounded-full bg-forest-600/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-forest-700">Certified</span>
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             ) : null}
