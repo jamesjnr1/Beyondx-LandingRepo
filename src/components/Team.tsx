@@ -51,14 +51,14 @@ export default function Team() {
               initial={{ opacity: 0, y: 20 }}
               animate={visible ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.4, delay: 0.05 + (i % 4) * 0.06 }}
-              className="flex items-center gap-3 rounded-xl bg-cream-50 p-4 shadow-sm ring-1 ring-ink-900/5"
+              className="flex flex-col items-center gap-2 rounded-xl bg-cream-50 p-4 text-center shadow-sm ring-1 ring-ink-900/5 sm:flex-row sm:gap-3 sm:text-left"
             >
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-forest-600 text-sm font-bold text-cream-50">
                 {m.initials}
               </span>
               <span className="min-w-0">
-                <span className="block truncate font-serif text-base font-medium text-ink-900">{m.name}</span>
-                <span className="block text-xs text-ink-700">{m.role}</span>
+                <span className="block font-serif text-[15px] font-medium leading-snug text-ink-900 [overflow-wrap:anywhere] sm:text-base">{m.name}</span>
+                <span className="mt-0.5 block text-xs leading-snug text-ink-700">{m.role}</span>
               </span>
             </motion.div>
           ))}
