@@ -3,17 +3,17 @@ import { useReveal } from '../hooks/useReveal'
 import { CircleCheck as CheckCircle } from 'lucide-react'
 
 const employerPoints = [
-  'Candidates have served their sentences in full and are legally recognised as having fulfilled their debt to society',
+  'Every candidate is individually assessed and vetted for work-readiness before being listed',
   'You are hiring a vetted, work-ready individual assessed as fit for employment',
-  'Hiring through this platform may qualify your business for government tax incentives',
   'All job completions are tracked and recorded through the platform',
+  'A coordinator is available if any issue arises during a task',
 ]
 
 const workerPoints = [
-  'You have completed your sentence — this platform helps you write the next chapter through honest work and fair pay',
-  'Your criminal history will be disclosed transparently, but your conduct and work record will speak louder over time',
+  'This platform helps you build a verified record through honest work and fair pay',
   'You have the right to fair pay, respectful treatment, and to report any employer who treats you unfairly',
   'More completed jobs means a stronger profile and access to better opportunities',
+  'Your work speaks for you here, not your history',
 ]
 
 export default function Transparency() {
@@ -46,7 +46,7 @@ export default function Transparency() {
               For Employers
             </h3>
             <p className="-mt-4 mb-5 text-sm font-medium text-ink-700">
-              Important Notice Regarding Our Talent Pool
+              Our Verification Standard
             </p>
             <ul className="space-y-4">
               {employerPoints.map((point, i) => (
@@ -100,11 +100,10 @@ export default function Transparency() {
           className="mx-auto mt-10 max-w-3xl rounded-xl border border-clay-400/30 bg-clay-400/8 p-5 text-center"
         >
           <p className="text-sm leading-relaxed text-ink-700 text-pretty">
-            <span className="font-semibold text-clay-600">Important:</span> All
-            individuals on this platform are participants in BeyondX's
-            second-chance employment programme, vetted directly by our team.
-            Candidates have served their sentences in full and are legally
-            recognised as having fulfilled their debt to society.
+            <span className="font-semibold text-clay-600">Important:</span> Every
+            worker on this platform is individually vetted by our team before being
+            listed. Verification confirms identity and work-readiness. All workers
+            are held to the same standard of conduct and fairness.
           </p>
         </motion.div>
       </div>

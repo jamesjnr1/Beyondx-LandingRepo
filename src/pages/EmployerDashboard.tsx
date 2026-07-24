@@ -8,6 +8,7 @@ import LiveLocation from '../components/LiveLocation'
 import { tasks as tasksApi, workers as workersApi, employers as employersApi, contact, session, ApiError, type Task, type Worker, type Employer } from '../lib/api'
 import { DISPATCH_ENABLED, DISPATCH_PAUSED_MESSAGE } from '../lib/config'
 import { categories, remoteCategories, allCategories } from '../data'
+import { PLATFORM_FEE } from '../lib/payments'
 
 const cedis = (n?: number | string) => `GH\u20b5 ${Number(n || 0).toLocaleString()}`
 const wName = (w: Worker) => (w.fullName as string) || (w.name as string) || 'Worker'
@@ -486,14 +487,16 @@ function DispatchModal({ worker, category, onClose, onDone, onError }: { worker:
   const cat = allCategories.find((c) => c.title === taskType)
   // BeyondX sets a standard rate per work type — not per worker.
   const rate = cat ? cat.rate : wCharge(worker)
-  const pay = rate * days
+  const workerGets = rate * days
+  const fee = Math.round(workerGets * PLATFORM_FEE)
+  const pay = workerGets + fee
   const duration = days === 0.5 ? 'Half Day' : days === 1 ? '1 Day' : `${days} Days`
 
   const submit = async () => {
     if (!payRef.trim() || !method || busy) return
     setBusy(true)
     try {
-      await tasksApi.dispatch({ worker, taskType, location: cat?.mode === 'remote' ? 'Remote' : location, duration, pay, paymentRef: `${method} ${payRef.trim()}` })
+      await tasksApi.dispatch({ worker, taskType, location: cat?.mode === 'remote' ? 'Remote' : location, duration, pay: workerGets, paymentRef: `${method} ${payRef.trim()}` })
       onDone()
     } catch (e) {
       onError(e instanceof ApiError ? e.message : 'Please try again.')
@@ -539,13 +542,19 @@ function DispatchModal({ worker, category, onClose, onDone, onError }: { worker:
         </div>
 
         <div className="mt-4 flex items-center justify-between rounded-xl bg-forest-600/5 p-4 ring-1 ring-forest-600/15">
-          <span className="text-sm text-ink-700">
+          <span className="min-w-0 text-sm text-ink-700">
             Amount to pay
-            <span className="mt-0.5 block text-xs text-ink-700/80">
+            <span className="mt-1 block text-xs leading-relaxed text-ink-700/80">
+              {cedis(workerGets)} to the worker
+              <span className="block">+ {cedis(fee)} BeyondX service fee</span>
+            </span>
+          </span>
+          <span className="shrink-0 text-right">
+            <span className="block font-serif text-lg font-semibold text-ink-900">{cedis(pay)}</span>
+            <span className="block text-[11px] text-ink-700/80">
               {cedis(rate)} {cat?.rateUnit || 'per day'} &times; {days === 0.5 ? 'half day' : `${days} day${days === 1 ? '' : 's'}`}
             </span>
           </span>
-          <span className="font-serif text-lg font-semibold text-ink-900">{cedis(pay)}</span>
         </div>
 
         <div className="mt-4">
@@ -611,7 +620,9 @@ function RateModal({ task, onClose, onDone, onError }: { task: Task; onClose: ()
             `Task: ${task.taskType || '—'}\n` +
             `Location: ${task.location || '—'}\n` +
             `Duration: ${task.duration || '—'}\n` +
-            `Task amount: GHS ${Number(task.pay || 0).toFixed(2)}\n` +
+            `Worker is owed: GHS ${Number(task.pay || 0).toFixed(2)}\n` +
+            `BeyondX service fee: GHS ${(Number(task.pay || 0) * PLATFORM_FEE).toFixed(2)}\n` +
+            `Employer paid in total: GHS ${(Number(task.pay || 0) * (1 + PLATFORM_FEE)).toFixed(2)}\n` +
             (paymentRef ? `Employer payment ref: ${paymentRef}\n` : '') +
             `Employer rating: ${stars}/5\n` +
             (comment.trim() ? `Employer feedback: ${comment.trim()}\n` : '') +
@@ -654,7 +665,9 @@ function PostTask({ onDone }: { onDone: (msg: string) => void }) {
   const cat = allCategories.find((c) => c.title === taskType)
   const rate = cat ? cat.rate : 0
   const days = duration === 'Half Day' ? 0.5 : parseFloat(duration) || 1
-  const pay = String(rate * days)
+  const workerGets = rate * days
+  const fee = Math.round(workerGets * PLATFORM_FEE)
+  const pay = String(workerGets)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
@@ -701,10 +714,10 @@ function PostTask({ onDone }: { onDone: (msg: string) => void }) {
             <div className="block">
               <span className="mb-1 block text-xs font-medium text-ink-700">Pay (GH₵)</span>
               <div className="flex h-[42px] items-center rounded-xl bg-forest-600/5 px-3 text-sm font-semibold text-ink-900 ring-1 ring-forest-600/15">
-                {cedis(pay)}
+                {cedis(workerGets + fee)}
               </div>
-              <span className="mt-1 block text-xs text-ink-700">
-                Standard rate {cedis(rate)} {cat?.rateUnit || 'per day'}
+              <span className="mt-1 block text-xs leading-relaxed text-ink-700">
+                {cedis(workerGets)} to the worker + {cedis(fee)} service fee
               </span>
             </div>
           </div>

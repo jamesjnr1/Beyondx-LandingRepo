@@ -34,8 +34,9 @@ export default function Sponsors() {
             <span className="italic gradient-text">Movement.</span>
           </h2>
           <p className="mt-4 text-lg text-ink-700 text-pretty">
-            BeyondX runs on belief — belief that people rebuilding their lives after
-            release can be contributors, not just statistics.
+            BeyondX runs on belief — belief that everyone willing to work deserves a
+            fair shot, and a record that tracks what they&rsquo;ve built, not what&rsquo;s
+            held them back.
           </p>
         </div>
 

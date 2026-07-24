@@ -65,9 +65,8 @@ export default function Footer() {
 
         <div className="mt-12 border-t border-ink-900/8 pt-6">
           <p className="text-xs leading-relaxed text-ink-700/60 text-pretty">
-            All individuals listed on this platform are participants in
-            BeyondX's second-chance employment programme, vetted directly by our
-            team. © {new Date().getFullYear()} BeyondX. Go Beyond. Hire Purpose.
+            Every worker on this platform is individually vetted by our team before
+            being listed. © {new Date().getFullYear()} BeyondX. Same Hands. New Start.
           </p>
         </div>
       </div>

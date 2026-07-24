@@ -96,9 +96,10 @@ export default function OnboardingQuestions({ role, onDone }: Props) {
           <div className="mt-4 space-y-3">
             <ul className="space-y-2 text-sm text-ink-700">
               {[
-                'You have the right to fair pay for every completed job.',
-                'You have the right to report any employer who treats you unfairly.',
-                'More completed jobs means a stronger profile and better opportunities.',
+                'This platform helps you build a verified record through honest work and fair pay',
+                'You have the right to fair pay, respectful treatment, and to report any employer who treats you unfairly',
+                'More completed jobs means a stronger profile and access to better opportunities',
+                'Your work speaks for you here, not your history',
               ].map((t) => (
                 <li key={t} className="flex gap-2">
                   <HeartHandshake size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-forest-600" />

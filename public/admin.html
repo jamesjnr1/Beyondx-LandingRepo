@@ -292,7 +292,7 @@ tr:hover td{background:var(--bg);}
       <div class="sec" id="sec-workers"><input class="srch" id="wSearch" placeholder="Search workers by name, ID, phone, or skill…" oninput="wSearchInput()"/><div class="tc"><div class="tc-h"><span class="tc-ht">Workers</span><span class="tc-hm" id="wc"></span></div><table><thead><tr><th>Name</th><th>Worker ID</th><th>Phone</th><th>Status</th><th>Skills</th><th>Tasks</th><th>Rating</th></tr></thead><tbody id="wt"></tbody></table><div id="wtMore"></div></div></div>
       <div class="sec" id="sec-history"><div id="historyContent"></div></div>
       <div class="sec" id="sec-transactions"><div id="txContent"></div></div>
-      <div class="sec" id="sec-messages"><div id="messagesContent"></div></div>
+      <div class="sec" id="sec-messages"><div id="smsFormBox"></div><div id="smsDataBox"></div></div>
       <div class="sec" id="sec-employers"><input class="srch" id="eSearch" placeholder="Search employers by organisation or phone…" oninput="eSearchInput()"/><div class="tc"><div class="tc-h"><span class="tc-ht">Employers</span><span class="tc-hm" id="ec"></span></div><table><thead><tr><th>Organisation</th><th>Phone</th><th>Tasks</th><th>Completed</th><th>Total Spent</th></tr></thead><tbody id="et"></tbody></table><div id="etMore"></div></div></div>
       <div class="sec" id="sec-inbox">
         <div id="inAlert"></div>
@@ -440,7 +440,7 @@ tr:hover td{background:var(--bg);}
 </div>
 <script>
 const API='https://beyondx-backend-production-1a08.up.railway.app';
-let pass='',tasks=[],workers=[],smsLogs=[],smsBroadcastMode='specific';
+let pass='',tasks=[],workers=[],smsLogs=[],smsBroadcastMode='specific',smsDraftPhone='',smsDraftMessage='';
 let wtShown=20,etShown=20,histShown=20,txShown=20,smsShown=20;
 function showMoreHtml(remaining,onclick){
   return remaining>0?`<div style="text-align:center;padding:14px;"><button onclick="${onclick}" style="padding:9px 20px;background:var(--off);border:1.5px solid var(--b);border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--f);color:var(--ink2);">Show More (${remaining} remaining)</button></div>`:'';
@@ -517,6 +517,7 @@ function nav(id,el){
   document.getElementById('pageTitle').textContent=T[id]||id;
   if(id==='inbox'){ inLoad(); return; }
   if(id==='notify'){ ntChars(); ntLoad(); return; }
+  if(id==='messages'){ rm(); return; }
   if(id==='payconfirm'){ pcEmployerList().then(pcPreview); pcRenderLog(); return; }
   if(id==='analytics'){ if(!anData)loadAnalytics(); anStartAuto(); return; }
   if(id!=='overview')rs(id);
@@ -541,7 +542,7 @@ function ro(){
   const uniq=withTasks.size;
   document.getElementById('sg').innerHTML=`
     <div class="sc dk"><div class="sc-l">Total Tasks</div><div class="sc-v">${tasks.length}</div><div class="sc-s">${co.length} completed &middot; ${op.length} open</div></div>
-    <div class="sc"><div class="sc-l">Revenue</div><div class="sc-v">GH&#8373; ${rev.toFixed(0)}</div><div class="sc-s">GH&#8373; ${(rev*.15).toFixed(0)} platform fees</div></div>
+    <div class="sc"><div class="sc-l">Revenue</div><div class="sc-v">GH&#8373; ${(rev*1.15).toFixed(0)}</div><div class="sc-s">GH&#8373; ${(rev*.15).toFixed(0)} platform fees</div></div>
     <div class="sc"><div class="sc-l">Pending Payouts</div><div class="sc-v">GH&#8373; ${pend.toFixed(0)}</div><div class="sc-s ${pend>0?'w':''}">${py.length} worker${py.length!==1?'s':''} waiting</div></div>
     <div class="sc"><div class="sc-l">Network</div><div class="sc-v">${workers.length} workers</div><div class="sc-s">${uniq} employer${uniq!==1?'s':''}</div></div>`;
   const complRate=tasks.length?(co.length/tasks.length*100):0;
@@ -586,7 +587,7 @@ function rs(id){
   else if(id==='employers')re();
   else if(id==='history')rh();
   else if(id==='transactions')rt();
-  else if(id==='messages')rm();
+  else if(id==='messages')rmData();
 }
 function stars(n){ return '★'.repeat(Math.round(n))+'☆'.repeat(5-Math.round(n)); }
 function closeDetail(){ document.getElementById('detailOverlay').classList.remove('on'); }
@@ -666,13 +667,13 @@ function showEmployerDetail(employerId){
   document.getElementById('detailOverlay').classList.add('on');
 }
 function pc(t){
-  const w=t.acceptedBy;const wp=(parseFloat(t.pay)*0.85).toFixed(2);const fp=(parseFloat(t.pay)*.15).toFixed(2);
+  const w=t.acceptedBy;const wp=parseFloat(t.pay).toFixed(2);const fp=(parseFloat(t.pay)*.15).toFixed(2);
   return`<div class="pc"><div class="pc-hd"><div><div class="pc-n">${w?.fullName||'Unknown Worker'}</div><div class="pc-tk">${t.taskType} &middot; ${t.location} &middot; ${t.duration}</div></div><div style="text-align:right"><div class="pc-aml">Send to worker</div><div class="pc-am">GH&#8373; ${wp}</div></div></div><div class="pc-g"><div class="pc-f"><div class="pc-fl">Mobile Money Number</div><div class="pc-fv ph">${w?.phone||'Not on record'}</div></div><div class="pc-f"><div class="pc-fl">Worker ID</div><div class="pc-fv">${w?.workerId||'&mdash;'}</div></div><div class="pc-f"><div class="pc-fl">Employer</div><div class="pc-fv">${t.employer?.orgName||'&mdash;'}</div></div><div class="pc-f"><div class="pc-fl">BeyondX Keeps</div><div class="pc-fv">GH&#8373; ${fp}</div></div></div><div class="pc-nt">Send GH&#8373; ${wp} via Mobile Money to the number above, then confirm below.</div><button class="btn-p" onclick="mkp('${t.id}','${w?.fullName||''}','${wp}')">I Have Sent GH&#8373; ${wp} &mdash; Mark as Paid</button></div>`;
 }
 function tl(list){
   if(!list.length)return`<div class="empty">No tasks here</div>`;
   const bm={open:['bo','Open'],accepted:['ba','In Progress'],pending_confirmation:['bp','Awaiting Payment'],completed:['bd','Completed']};
-  return list.map(t=>{const w=t.acceptedBy;const[bc,bl]=bm[t.status]||['bo','Unknown'];const wp=(parseFloat(t.pay)*0.85).toFixed(2);
+  return list.map(t=>{const w=t.acceptedBy;const[bc,bl]=bm[t.status]||['bo','Unknown'];const wp=parseFloat(t.pay).toFixed(2);
   return`<div class="tsk"><div class="tsk-tp"><div><div class="tsk-n">${t.taskType}</div><div class="tsk-m">${t.location} &middot; ${t.duration} &middot; ${new Date(t.createdAt).toLocaleDateString()}</div></div><span class="badge ${bc}">${bl}</span></div><div class="tsk-b"><div class="tr"><span class="tr-k">Employer</span><span class="tr-v">${t.employer?.orgName||'&mdash;'}</span></div><div class="tr"><span class="tr-k">Worker</span><span class="tr-v">${w?.fullName||'Unassigned'}${w?.phone?' &middot; '+w.phone:''}</span></div><div class="tr"><span class="tr-k">Employer Paid</span><span class="tr-v">GH&#8373; ${parseFloat(t.pay).toFixed(2)}</span></div><div class="tr"><span class="tr-k">Worker Gets</span><span class="tr-v g">GH&#8373; ${wp}</span></div></div>${t.status==='pending_confirmation'?`<button class="btn-ps" onclick="mkp('${t.id}','${w?.fullName||''}','${wp}')">Confirm Payment Sent</button>`:''}</div>`;
   }).join('');
 }
@@ -732,7 +733,7 @@ function rh(){
         <td>${t.employer?.orgName||'—'}</td>
         <td class="tm">${new Date(t.createdAt).toLocaleDateString()}</td>
         <td class="tm">GH&#8373; ${parseFloat(t.pay).toFixed(0)}</td>
-        <td class="tg">GH&#8373; ${(parseFloat(t.pay)*0.85).toFixed(0)}</td>
+        <td class="tg">GH&#8373; ${parseFloat(t.pay).toFixed(0)}</td>
       </tr>`).join('')}</tbody></table>
       ${showMoreHtml(completed.length-histShown,'histShown+=20;rh();')}
     </div>` : `<div class="empty">No completed tasks yet</div>`;
@@ -740,6 +741,43 @@ function rh(){
 }
 
 function rm(){
+  // Only rebuild the compose form on first visit to this tab, or when the
+  // broadcast mode changes. The periodic auto-refresh (every 15s) must never
+  // touch it — that was wiping out whatever the admin was typing.
+  rmForm();
+  rmData();
+}
+
+function rmForm(){
+  const box=document.getElementById('smsFormBox');
+  if(!box) return;
+  box.innerHTML=`<div class="tc" style="margin-bottom:16px;">
+    <div class="tc-h"><span class="tc-ht">Send Custom SMS</span></div>
+    <div style="padding:16px;">
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+        <button type="button" onclick="setSmsMode('specific')" style="padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--f);border:1.5px solid ${smsBroadcastMode==='specific'?'var(--g2)':'var(--b)'};background:${smsBroadcastMode==='specific'?'var(--g2)':'transparent'};color:${smsBroadcastMode==='specific'?'#fff':'var(--ink3)'};">Specific Number(s)</button>
+        <button type="button" onclick="setSmsMode('workers')" style="padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--f);border:1.5px solid ${smsBroadcastMode==='workers'?'var(--g2)':'var(--b)'};background:${smsBroadcastMode==='workers'?'var(--g2)':'transparent'};color:${smsBroadcastMode==='workers'?'#fff':'var(--ink3)'};">All Workers (${workers.length})</button>
+        <button type="button" onclick="setSmsMode('employers')" style="padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--f);border:1.5px solid ${smsBroadcastMode==='employers'?'var(--g2)':'var(--b)'};background:${smsBroadcastMode==='employers'?'var(--g2)':'transparent'};color:${smsBroadcastMode==='employers'?'#fff':'var(--ink3)'};">All Employers</button>
+        <button type="button" onclick="setSmsMode('both')" style="padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--f);border:1.5px solid ${smsBroadcastMode==='both'?'var(--g2)':'var(--b)'};background:${smsBroadcastMode==='both'?'var(--g2)':'transparent'};color:${smsBroadcastMode==='both'?'#fff':'var(--ink3)'};">Everyone</button>
+      </div>
+      ${smsBroadcastMode==='specific'?`<textarea id="customSmsPhone" oninput="smsDraftPhone=this.value" placeholder="Phone number(s) — one per line, or separated by commas. e.g. 0244000000, 0501234567" rows="2" style="width:100%;padding:9px 12px;border:1.5px solid var(--b);border-radius:8px;font-size:12.5px;font-family:var(--f);resize:vertical;margin-bottom:8px;">${anEsc(smsDraftPhone)}</textarea>`:`<div style="background:var(--off);border:1.5px solid var(--b);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:12px;color:var(--ink3);">${smsBroadcastMode==='workers'?`Will send to all ${workers.length} registered workers.`:smsBroadcastMode==='employers'?`Will send to all registered employers.`:`Will send to every registered worker and employer.`}</div>`}
+      <textarea id="customSmsMessage" oninput="smsDraftMessage=this.value" placeholder="Message..." rows="3" style="width:100%;padding:9px 12px;border:1.5px solid var(--b);border-radius:8px;font-size:12.5px;font-family:var(--f);resize:vertical;margin-bottom:10px;">${anEsc(smsDraftMessage)}</textarea>
+      <button onclick="sendCustomSms()" style="padding:9px 18px;background:var(--g2);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--f);">Send SMS</button>
+    </div>
+  </div>`;
+}
+
+function setSmsMode(mode){
+  // Save whatever is currently typed before the form rebuilds for the new mode.
+  const phoneEl=document.getElementById('customSmsPhone');
+  const msgEl=document.getElementById('customSmsMessage');
+  if(phoneEl) smsDraftPhone=phoneEl.value;
+  if(msgEl) smsDraftMessage=msgEl.value;
+  smsBroadcastMode=mode;
+  rmForm();
+}
+
+function rmData(){
   const lowBalanceLogs=smsLogs.filter(l=>l.errorType==='low_balance');
   const failedCount=smsLogs.filter(l=>l.status==='failed').length;
   const sentCount=smsLogs.filter(l=>l.status==='sent').length;
@@ -749,21 +787,6 @@ function rm(){
     <div style="font-size:12px;color:#7f1d1d;">Recent SMS sends failed with a balance-related error. Top up your Arkesel account to resume sending dispatch alerts, welcome texts, and payment confirmations.</div>
   </div>`:'';
 
-  const sendForm=`<div class="tc" style="margin-bottom:16px;">
-    <div class="tc-h"><span class="tc-ht">Send Custom SMS</span></div>
-    <div style="padding:16px;">
-      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
-        <button type="button" onclick="smsBroadcastMode='specific';rm();" style="padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--f);border:1.5px solid ${smsBroadcastMode==='specific'?'var(--g2)':'var(--b)'};background:${smsBroadcastMode==='specific'?'var(--g2)':'transparent'};color:${smsBroadcastMode==='specific'?'#fff':'var(--ink3)'};">Specific Number(s)</button>
-        <button type="button" onclick="smsBroadcastMode='workers';rm();" style="padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--f);border:1.5px solid ${smsBroadcastMode==='workers'?'var(--g2)':'var(--b)'};background:${smsBroadcastMode==='workers'?'var(--g2)':'transparent'};color:${smsBroadcastMode==='workers'?'#fff':'var(--ink3)'};">All Workers (${workers.length})</button>
-        <button type="button" onclick="smsBroadcastMode='employers';rm();" style="padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--f);border:1.5px solid ${smsBroadcastMode==='employers'?'var(--g2)':'var(--b)'};background:${smsBroadcastMode==='employers'?'var(--g2)':'transparent'};color:${smsBroadcastMode==='employers'?'#fff':'var(--ink3)'};">All Employers</button>
-        <button type="button" onclick="smsBroadcastMode='both';rm();" style="padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--f);border:1.5px solid ${smsBroadcastMode==='both'?'var(--g2)':'var(--b)'};background:${smsBroadcastMode==='both'?'var(--g2)':'transparent'};color:${smsBroadcastMode==='both'?'#fff':'var(--ink3)'};">Everyone</button>
-      </div>
-      ${smsBroadcastMode==='specific'?`<textarea id="customSmsPhone" placeholder="Phone number(s) — one per line, or separated by commas. e.g. 0244000000, 0501234567" rows="2" style="width:100%;padding:9px 12px;border:1.5px solid var(--b);border-radius:8px;font-size:12.5px;font-family:var(--f);resize:vertical;margin-bottom:8px;"></textarea>`:`<div style="background:var(--off);border:1.5px solid var(--b);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:12px;color:var(--ink3);">${smsBroadcastMode==='workers'?`Will send to all ${workers.length} registered workers.`:smsBroadcastMode==='employers'?`Will send to all registered employers.`:`Will send to every registered worker and employer.`}</div>`}
-      <textarea id="customSmsMessage" placeholder="Message..." rows="3" style="width:100%;padding:9px 12px;border:1.5px solid var(--b);border-radius:8px;font-size:12.5px;font-family:var(--f);resize:vertical;margin-bottom:10px;"></textarea>
-      <button onclick="sendCustomSms()" style="padding:9px 18px;background:var(--g2);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--f);">Send SMS</button>
-    </div>
-  </div>`;
-
   const rows=smsLogs.slice(0,smsShown).map(l=>`<tr>
     <td class="tm">${new Date(l.createdAt).toLocaleString()}</td>
     <td class="tm">${l.phone}</td>
@@ -771,20 +794,20 @@ function rm(){
     <td>${l.status==='sent'?'<span style="color:var(--g3);font-weight:600;font-size:11px;">Sent</span>':l.errorType==='low_balance'?'<span style="color:#b91c1c;font-weight:600;font-size:11px;">Failed — Low Balance</span>':'<span style="color:#b91c1c;font-weight:600;font-size:11px;">Failed</span>'}</td>
   </tr>`).join('');
 
-  document.getElementById('messagesContent').innerHTML=`
+  document.getElementById('smsDataBox').innerHTML=`
     ${alertBanner}
     <div class="stats" style="margin-bottom:16px;grid-template-columns:repeat(3,1fr);">
       <div class="sc"><div class="sc-l">Sent (last 100)</div><div class="sc-v">${sentCount}</div></div>
       <div class="sc"><div class="sc-l">Failed</div><div class="sc-v">${failedCount}</div></div>
       <div class="sc"><div class="sc-l">Low Balance Failures</div><div class="sc-v" style="color:${lowBalanceLogs.length?'#b91c1c':'inherit'}">${lowBalanceLogs.length}</div></div>
     </div>
-    ${sendForm}
     <div class="tc">
       <div class="tc-h"><span class="tc-ht">Recent SMS</span><span class="tc-hm">${smsLogs.length}</span></div>
       <table><thead><tr><th>Time</th><th>Phone</th><th>Message</th><th>Status</th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="empty">No messages sent yet</td></tr>'}</tbody></table>
-      ${showMoreHtml(smsLogs.length-smsShown,'smsShown+=20;rm();')}
+      ${showMoreHtml(smsLogs.length-smsShown,'smsShown+=20;rmData();')}
     </div>`;
 }
+
 async function sendCustomSms(){
   const message=document.getElementById('customSmsMessage').value.trim();
   if(!message){showToast('Please enter a message.');return;}
@@ -833,8 +856,8 @@ function rt(){
   const html = `
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
       <div class="sc"><div class="sc-l">Total Transactions</div><div class="sc-v">${paid.length}</div></div>
-      <div class="sc dk"><div class="sc-l">Total Revenue</div><div class="sc-v">GH&#8373; ${totalRev.toFixed(0)}</div></div>
-      <div class="sc"><div class="sc-l">Platform Earnings</div><div class="sc-v">GH&#8373; ${(totalRev*0.15).toFixed(0)}</div></div>
+      <div class="sc dk"><div class="sc-l">Employer Payments</div><div class="sc-v">GH&#8373; ${(totalRev*1.15).toFixed(0)}</div><div class="sc-s">GH&#8373; ${totalRev.toFixed(0)} to workers</div></div>
+      <div class="sc"><div class="sc-l">Platform Earnings</div><div class="sc-v">GH&#8373; ${(totalRev*0.15).toFixed(0)}</div><div class="sc-s">15% service fee</div></div>
     </div>
     <div class="tc">
       <div class="tc-h"><span class="tc-ht">Transaction Log</span><span class="tc-hm">${paid.length} transactions</span></div>
@@ -844,8 +867,8 @@ function rt(){
         <td>${t.employer?.orgName||'—'}</td>
         <td>${t.acceptedBy?.fullName||'—'}</td>
         <td class="tm">${new Date(t.createdAt).toLocaleDateString()}</td>
-        <td class="tm">GH&#8373; ${parseFloat(t.pay).toFixed(0)}</td>
-        <td class="tg">GH&#8373; ${(parseFloat(t.pay)*0.85).toFixed(0)}</td>
+        <td class="tm">GH&#8373; ${(parseFloat(t.pay)*1.15).toFixed(0)}</td>
+        <td class="tg">GH&#8373; ${parseFloat(t.pay).toFixed(0)}</td>
         <td class="tm">GH&#8373; ${(parseFloat(t.pay)*0.15).toFixed(0)}</td>
       </tr>`).join('')}</tbody></table>${showMoreHtml(paid.length-txShown,'txShown+=20;rt();')}` : `<div class="empty">No transactions yet</div>`}
     </div>`;

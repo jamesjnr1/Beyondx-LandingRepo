@@ -3,9 +3,9 @@ import { useReveal } from '../hooks/useReveal'
 
 const blocks = [
   {
-    eyebrow: 'About the Programme',
+    eyebrow: 'About BeyondX',
     title: 'Work that restores dignity. Hire that builds trust.',
-    body: 'BeyondX is a structured second-chance employment programme. It places vetted, skill-matched workers who are rebuilding their lives after release into verified short-term roles with responsible employers across Greater Accra.',
+    body: 'BeyondX is a verified labour marketplace. It places vetted, skill-matched workers into short-term roles with responsible employers across Greater Accra, and tracks impact for workers rebuilding after setbacks as part of that mission.',
     image: '/about.jpg',
     alt: 'Certified workers in safety harnesses on a construction site in Greater Accra',
   },

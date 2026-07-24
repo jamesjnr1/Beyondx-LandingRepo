@@ -206,7 +206,7 @@ export const pillars: Pillar[] = [
   {
     title: 'Lasting Reintegration',
     description:
-      'BeyondX is not a one-time placement — it is a pathway. Workers build verified records that open doors to permanent employment after release.',
+      'BeyondX is not a one-time placement — it is a pathway. Workers build verified records that open doors to permanent employment.',
   },
 ]
 
@@ -239,7 +239,7 @@ export const stories: Story[] = [
   {
     tag: 'Events',
     title: 'BeyondX joins the Ghana Employers Association as impact partner',
-    excerpt: 'A new partnership to promote second-chance hiring across member organisations.',
+    excerpt: 'A new partnership to promote verified, skills-based hiring across member organisations.',
     image: 'https://images.pexels.com/photos/7149172/pexels-photo-7149172.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
   {

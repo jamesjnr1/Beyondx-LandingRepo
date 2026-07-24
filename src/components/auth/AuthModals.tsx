@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode, type FormEvent, type InputHTMLAttr
 import { X, ShieldCheck, ChevronLeft } from 'lucide-react'
 import Logo from '../Logo'
 import { useAuth, type AuthView } from './AuthContext'
-import { auth, session, referral, ApiError } from '../../lib/api'
+import { auth, session, referral, contact, ApiError } from '../../lib/api'
 import OnboardingQuestions from './OnboardingQuestions'
 import * as v from '../../lib/validate'
 import { categories, remoteCategories } from '../../data'
@@ -233,6 +233,21 @@ function EmployerRegister() {
         contactPerson: f.contact.trim(), phone: f.phone.trim(), region: f.region,
       })
       session.saveEmployer(data.token, data.employer)
+      // Fire and forget — a failed notification must not block the signup.
+      contact.send({
+        name: f.org.trim(),
+        email: f.email.trim(),
+        phone: f.phone.trim(),
+        message:
+          `A new employer account was created.\n\n` +
+          `Organisation: ${f.org.trim()}\n` +
+          `Contact person: ${f.contact.trim()}\n` +
+          `Phone: ${f.phone.trim()}\n` +
+          `Email: ${f.email.trim()}\n` +
+          `Region: ${f.region}\n\n` +
+          `Onboarding answers will follow in a separate email if they complete them.`,
+        category: 'employer_registered',
+      }).catch(() => null)
       open('employer-onboarding')
     } catch (e2) {
       setErr(errText(e2))
@@ -342,6 +357,18 @@ function WorkerRegister() {
       }
       session.saveWorker(data.token, data.worker)
       referral.clear()
+      contact.send({
+        name: f.name.trim(),
+        phone: f.phone.trim(),
+        message:
+          `A new worker account was created.\n\n` +
+          `Name: ${f.name.trim()}\n` +
+          `Phone: ${f.phone.trim()}\n` +
+          `Skills: ${skills.join(', ') || '—'}\n` +
+          `Guarantor: ${f.gName.trim()} (${f.gPhone.trim()}, ${f.relationship})\n\n` +
+          `Onboarding answers will follow in a separate email if they complete them.`,
+        category: 'worker_registered',
+      }).catch(() => null)
       open('worker-onboarding')
     } catch (e2) {
       setErr(errText(e2))
@@ -432,11 +459,11 @@ function EmployerOnboarding() {
   }
 
   return (
-    <Modal title="Before You Proceed" subtitle="Important notice regarding our talent pool">
+    <Modal title="Before You Proceed" subtitle="Our verification standard">
       <div className="space-y-4 text-sm text-ink-700">
-        <p>All individuals on this platform are participants in BeyondX's second-chance employment programme, vetted directly by our team.</p>
+        <p>All workers on this platform are individually vetted by our team.</p>
         <ul className="space-y-2">
-          {['Candidates have served their sentences in full and are legally recognised as having fulfilled their debt to society.', 'You are hiring vetted, work-ready individuals assessed as fit for employment.', 'Hiring through this platform may qualify your business for government tax incentives.'].map((t) => (
+          {['Workers are assessed and confirmed as work-ready before listing.', 'You are hiring vetted, work-ready individuals assessed as fit for employment.', 'Hiring through this platform supports transparent, tracked work history.'].map((t) => (
             <li key={t} className="flex gap-2"><ShieldCheck size={16} className="mt-0.5 shrink-0 text-forest-600" /><span>{t}</span></li>
           ))}
         </ul>
