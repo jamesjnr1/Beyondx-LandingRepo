@@ -1,4 +1,4 @@
-import { Instagram, Linkedin, Music2, Twitter, Mail } from 'lucide-react'
+import { Instagram, Linkedin, Music2, Twitter, Mail, MapPin } from 'lucide-react'
 import Logo from './Logo'
 import { useAuth } from './auth/AuthContext'
 
@@ -15,15 +15,26 @@ export default function Footer() {
   const linkCls = 'text-left transition-colors hover:text-forest-600'
 
   return (
-    <footer className="border-t border-ink-900/8 bg-cream-100 py-16">
+    <footer className="border-t border-ink-900/8 bg-cream-100 py-10 sm:py-16">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
           <div>
             <Logo tone="dark" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-700/70 text-pretty">
-              Connecting verified, skill-matched workers rebuilding their lives
-              with employers across Ghana.
+              Verified, skill-matched workers connected with employers across Ghana.
             </p>
+
+            {/* Contact folded in here on mobile instead of its own stacked
+                column below — same information, far less scrolling. From
+                `md:` up it reverts to the separate Contact column, which has
+                room to breathe alongside Pages and Access. */}
+            <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-700/70 md:hidden">
+              <span className="inline-flex items-center gap-1"><MapPin size={13} aria-hidden="true" /> Greater Accra, Ghana</span>
+              <a href="mailto:beyondx26@gmail.com" className="inline-flex items-center gap-1 transition-colors hover:text-forest-600">
+                <Mail size={13} aria-hidden="true" /> beyondx26@gmail.com
+              </a>
+            </p>
+
             <div className="mt-5 flex flex-wrap items-center gap-3">
               {socials.map(({ icon: Icon, href, label }) => (
                 <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}
@@ -32,10 +43,13 @@ export default function Footer() {
                 </a>
               ))}
             </div>
-            <p className="mt-3 text-xs text-ink-700/60">TikTok · IG · X: @beyondx26 · LinkedIn: Beyond X</p>
+            <p className="mt-3 hidden text-xs text-ink-700/60 md:block">TikTok · IG · X: @beyondx26 · LinkedIn: Beyond X</p>
           </div>
 
-          <div>
+          {/* Pages and Access repeat the main nav and the auth entry points —
+              both already reachable from the header on mobile, so they're
+              hidden there and only shown from `md:` up. */}
+          <div className="hidden md:block">
             <h4 className="mb-4 text-sm font-semibold text-ink-900">Pages</h4>
             <ul className="space-y-2.5 text-sm text-ink-700/70">
               <li><button onClick={() => go('home')} className={linkCls}>Home</button></li>
@@ -44,7 +58,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div>
+          <div className="hidden md:block">
             <h4 className="mb-4 text-sm font-semibold text-ink-900">Access</h4>
             <ul className="space-y-2.5 text-sm text-ink-700/70">
               <li><button onClick={() => open('employer-login')} className={linkCls}>Hire a worker</button></li>
@@ -54,7 +68,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div>
+          <div className="hidden md:block">
             <h4 className="mb-4 text-sm font-semibold text-ink-900">Contact</h4>
             <ul className="space-y-2.5 text-sm text-ink-700/70">
               <li>Greater Accra, Ghana</li>
@@ -63,7 +77,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 border-t border-ink-900/8 pt-6">
+        <div className="mt-8 border-t border-ink-900/8 pt-5 sm:mt-12 sm:pt-6">
           <p className="text-xs leading-relaxed text-ink-700/60 text-pretty">
             Every worker on this platform is individually vetted by our team before
             being listed. © {new Date().getFullYear()} BeyondX. Same Hands. New Start.

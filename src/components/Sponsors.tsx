@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { MoveHorizontal } from 'lucide-react'
 import { useReveal } from '../hooks/useReveal'
 
 const tiers = [
@@ -56,8 +57,9 @@ export default function Sponsors() {
           ))}
         </div>
 
-        <p className="mt-3 text-center text-xs text-ink-700/50 sm:hidden">
-          Swipe to see all tiers &rarr;
+        <p className="mt-4 flex items-center justify-center gap-1.5 text-xs font-medium text-ink-800 sm:hidden">
+          <MoveHorizontal size={14} aria-hidden="true" className="text-forest-600" />
+          Swipe to see all tiers
         </p>
       </div>
     </section>

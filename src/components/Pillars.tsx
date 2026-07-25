@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { MoveHorizontal } from 'lucide-react'
 import { useReveal } from '../hooks/useReveal'
 import { pillars } from '../data'
 
@@ -54,8 +55,9 @@ export default function Pillars() {
           ))}
         </div>
 
-        <p className="mt-3 text-center text-xs text-cream-200/40 sm:hidden">
-          Swipe to see all three &rarr;
+        <p className="mt-4 flex items-center justify-center gap-1.5 text-xs font-medium text-cream-100 sm:hidden">
+          <MoveHorizontal size={14} aria-hidden="true" className="text-forest-400" />
+          Swipe to see all three
         </p>
       </div>
     </section>
