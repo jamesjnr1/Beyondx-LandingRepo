@@ -8,8 +8,7 @@ import * as v from '../../lib/validate'
 import { categories, remoteCategories } from '../../data'
 import GoogleSignInButton from './GoogleSignInButton'
 import { supabase } from '../../lib/supabase'
-import VerifyEmailLanding from './VerifyEmailLanding'
-import { finishEmployerRegistration, savePendingEmployer } from './employerVerification'
+import { finishEmployerRegistration } from './employerVerification'
 
 const REGIONS = [
   'Greater Accra', 'Ashanti', 'Western', 'Central', 'Eastern',
@@ -215,7 +214,9 @@ function EmployerRegister() {
   const [f, setF] = useState({ org: '', contact: '', phone: '', region: '', email: '', password: '' })
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({})
   const [googleVerified, setGoogleVerified] = useState(false)
-  const [awaitingVerification, setAwaitingVerification] = useState(false)
+  const [awaitingCode, setAwaitingCode] = useState(false)
+  const [code, setCode] = useState('')
+  const [codeErr, setCodeErr] = useState<string | null>(null)
   const [resent, setResent] = useState(false)
   const set = (k: keyof typeof f) => (v: string) => {
     // Typing a new email by hand means it's no longer the Google-verified one.
@@ -232,20 +233,15 @@ function EmployerRegister() {
     return Object.keys(errs).length === 0
   }
 
-  const sendVerificationEmail = async () => {
-    if (!supabase) return false
-    const { error } = await supabase.auth.signUp({
+  const sendCode = async () => {
+    if (!supabase) return
+    // A verification code, independent of the password on the account —
+    // Supabase's job here is only to prove this email is real and reachable.
+    const { error } = await supabase.auth.signInWithOtp({
       email: f.email.trim(),
-      password: f.password,
-      options: { emailRedirectTo: window.location.origin + '/' },
+      options: { shouldCreateUser: true },
     })
-    // "already registered" from Supabase's own store just means someone
-    // started this before — either way, the verification email still goes
-    // out, so treat it the same as a fresh send.
-    if (error && !/already registered|already exists/i.test(error.message)) {
-      throw new Error(error.message)
-    }
-    return true
+    if (error) throw new Error(error.message)
   }
 
   const next = async (e: FormEvent) => {
@@ -263,12 +259,11 @@ function EmployerRegister() {
         await finishEmployerRegistration({ ...f })
         open('employer-onboarding')
       } else {
-        // Plain email + password: hold the details, send a verification
-        // email, and only create the Railway account once that link is
-        // clicked and the email is confirmed as real.
-        savePendingEmployer({ ...f })
-        await sendVerificationEmail()
-        setAwaitingVerification(true)
+        // Plain email + password: send a one-time code and hold here until
+        // it's typed back correctly, on this same screen — no email client,
+        // no separate tab, no link to click.
+        await sendCode()
+        setAwaitingCode(true)
       }
     } catch (e2) {
       setErr(errText(e2))
@@ -277,29 +272,65 @@ function EmployerRegister() {
     }
   }
 
-  if (awaitingVerification) {
+  const verifyCode = async () => {
+    if (!supabase || busy) return
+    setCodeErr(null); setBusy(true)
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: f.email.trim(),
+        token: code.trim(),
+        type: 'email',
+      })
+      if (error) throw new Error(/expired|invalid/i.test(error.message) ? 'That code is incorrect or has expired.' : error.message)
+      await finishEmployerRegistration({ ...f })
+      await supabase.auth.signOut() // Railway's own token is the session now.
+      open('employer-onboarding')
+    } catch (e2) {
+      setCodeErr(e2 instanceof Error ? e2.message : 'Could not verify that code.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (awaitingCode) {
     return (
-      <Modal title="Check your email" subtitle="One more step to confirm it's really you">
+      <Modal title="Enter your code" subtitle="One more step to confirm it's really you">
         <div className="space-y-4 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-forest-600/10">
             <Mail size={26} className="text-forest-600" />
           </div>
           <p className="text-sm leading-relaxed text-ink-700">
-            We sent a verification link to <span className="font-semibold text-ink-900">{f.email}</span>.
-            Open it on this device to finish creating your account.
+            We sent a code to <span className="font-semibold text-ink-900">{f.email}</span>.
+            Enter it below to finish creating your account.
           </p>
-          <p className="text-xs text-ink-700/70">
-            Didn&rsquo;t get it? Check spam, or
-          </p>
+          <input
+            value={code}
+            onChange={(e) => { setCode(e.target.value); setCodeErr(null) }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); verifyCode() } }}
+            inputMode="numeric"
+            autoFocus
+            placeholder="Enter the code"
+            className="w-full rounded-lg border border-ink-900/15 bg-white px-4 py-3 text-center text-lg tracking-widest text-ink-900 outline-none focus:border-forest-500 focus:ring-2 focus:ring-forest-500/20"
+          />
+          <FormError message={codeErr} />
+          <button
+            type="button"
+            disabled={busy || !code.trim()}
+            onClick={verifyCode}
+            className="w-full rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60"
+          >
+            {busy ? 'Verifying…' : 'Verify & Create Account'}
+          </button>
+          <p className="text-xs text-ink-700/70">Didn&rsquo;t get it? Check spam, or</p>
           <button
             type="button"
             disabled={resent}
             onClick={async () => {
-              try { await sendVerificationEmail(); setResent(true) } catch { /* keep the screen as-is */ }
+              try { await sendCode(); setResent(true) } catch { /* keep the screen as-is */ }
             }}
             className="text-sm font-medium text-forest-700 underline-offset-2 hover:underline disabled:text-ink-700/40 disabled:no-underline"
           >
-            {resent ? 'Sent again — check your inbox' : 'Resend the email'}
+            {resent ? 'Sent again — check your inbox' : 'Resend the code'}
           </button>
         </div>
       </Modal>
@@ -601,7 +632,6 @@ export default function AuthModals() {
     case 'worker-register': return <WorkerRegister />
     case 'employer-onboarding': return <EmployerOnboarding />
     case 'worker-onboarding': return <WorkerOnboarding />
-    case 'email-verification': return <VerifyEmailLanding />
     default: return null
   }
 }

@@ -1,10 +1,9 @@
 // src/components/auth/employerVerification.ts
 //
-// Shared between AuthModals (registration) and VerifyEmailLanding (the
-// clicked verification link) so both create the Railway account the same
-// way. Kept in its own file — AuthModals imports VerifyEmailLanding for the
-// email-verification view, so putting these here avoids a circular import
-// between the two.
+// Creates the actual Railway employer account, once an email is trusted —
+// either because Google already verified it, or because a typed one-time
+// code from Supabase confirmed it. Kept in its own small file since it's
+// used from more than one place.
 
 import { auth, session, contact } from '../../lib/api'
 
@@ -34,33 +33,4 @@ export async function finishEmployerRegistration(p: PendingEmployer) {
       `Onboarding answers will follow in a separate email if they complete them.`,
     category: 'employer_registered',
   }).catch(() => null)
-}
-
-// Bridges a Supabase email-verification click back to this device. Holding a
-// plaintext password here briefly is no more exposed than the form field it
-// came from a moment earlier — it's deleted the instant it's used or expires.
-const PENDING_KEY = 'bx_pending_employer'
-const PENDING_TTL_MS = 30 * 60 * 1000 // 30 minutes — long enough to check an inbox
-
-export function savePendingEmployer(p: PendingEmployer) {
-  try {
-    localStorage.setItem(PENDING_KEY, JSON.stringify({ ...p, savedAt: Date.now() }))
-  } catch { /* storage unavailable — Google path is unaffected either way */ }
-}
-
-export function readPendingEmployer(email: string): PendingEmployer | null {
-  try {
-    const raw = localStorage.getItem(PENDING_KEY)
-    if (!raw) return null
-    const p = JSON.parse(raw) as PendingEmployer & { savedAt: number }
-    if (Date.now() - p.savedAt > PENDING_TTL_MS) return null
-    if (p.email.trim().toLowerCase() !== email.trim().toLowerCase()) return null
-    return p
-  } catch {
-    return null
-  }
-}
-
-export function clearPendingEmployer() {
-  try { localStorage.removeItem(PENDING_KEY) } catch { /* ignore */ }
 }

@@ -8,7 +8,6 @@ export type AuthView =
   | 'employer-register'
   | 'worker-onboarding'
   | 'employer-onboarding'
-  | 'email-verification'
   | null
 
 export type Page = 'home' | 'team' | 'gallery' | 'news' | 'worker-dashboard' | 'employer-dashboard'
@@ -42,17 +41,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const [view, setView] = useState<AuthView>(() => {
     if (typeof window === 'undefined') return null
-
-    // A clicked Supabase verification link redirects back here carrying its
-    // own token, either in the hash (implicit flow) or a ?code= (PKCE). Only
-    // treat it as ours if we're also the ones who sent someone to verify —
-    // otherwise an unrelated ?code= from elsewhere could false-trigger this.
-    const hasPendingEmployer = (() => {
-      try { return Boolean(localStorage.getItem('bx_pending_employer')) } catch { return false }
-    })()
-    const looksLikeSupabaseCallback =
-      window.location.hash.includes('access_token') || new URLSearchParams(window.location.search).has('code')
-    if (hasPendingEmployer && looksLikeSupabaseCallback) return 'email-verification'
 
     // Anyone arriving with ?ref= in the URL followed a worker's referral link
     // and is here to sign up — open registration for them straight away.
