@@ -171,7 +171,7 @@ export const steps: Step[] = [
     number: '02',
     title: 'We match and confirm',
     description:
-      'We confirm the skill match, agree on timing, and handle the logistics.',
+      'We confirm the skill match and agree on timing.',
   },
   {
     number: '03',
