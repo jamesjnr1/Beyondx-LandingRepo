@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { useReveal } from '../hooks/useReveal'
-import { categories } from '../data'
+import { categories, remoteCategories } from '../data'
+import { Wifi } from 'lucide-react'
 
 export default function WorkerCategories() {
   const { ref, visible } = useReveal()
@@ -18,7 +19,7 @@ export default function WorkerCategories() {
           </h2>
           <p className="mt-4 text-lg text-ink-700 text-pretty">
             Workers are certified across these categories and matched to
-            employer needs throughout Ghana.
+            employer needs throughout Ghana &mdash; on site or remote.
           </p>
         </div>
 
@@ -54,6 +55,45 @@ export default function WorkerCategories() {
               </motion.div>
             )
           })}
+        </div>
+
+        {/* Remote work sits apart from the photo grid deliberately — these are
+            desk-based roles, not job sites, so a simple certified list reads
+            more honestly than forcing a stock photo onto each one. */}
+        <div className="mx-auto mt-20 max-w-4xl">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-forest-600/10 text-forest-600">
+              <Wifi size={17} aria-hidden="true" />
+            </span>
+            <div>
+              <h3 className="font-serif text-xl font-medium text-ink-900 sm:text-2xl">
+                Also available <span className="italic gradient-text">remotely</span>
+              </h3>
+              <p className="mt-0.5 text-sm text-ink-700">
+                Certified from anywhere &mdash; no job site required.
+              </p>
+            </div>
+          </div>
+
+          <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {remoteCategories.map((cat) => {
+              const Icon = cat.icon
+              return (
+                <li
+                  key={cat.title}
+                  className="flex items-start gap-3 rounded-xl bg-cream-100 p-4 ring-1 ring-ink-900/5 transition-colors hover:bg-forest-600/5"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-forest-600/10 text-forest-600">
+                    <Icon size={16} aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-ink-900">{cat.title}</span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-ink-700">{cat.description}</span>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
         </div>
       </div>
     </section>

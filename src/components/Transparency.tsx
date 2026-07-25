@@ -6,7 +6,7 @@ const employerPoints = [
   'Every candidate is individually assessed and vetted for work-readiness before being listed',
   'You are hiring a vetted, work-ready individual assessed as fit for employment',
   'All job completions are tracked and recorded through the platform',
-  'A coordinator is available if any issue arises during a task',
+  'Our support team is available if any issue arises during a task',
 ]
 
 const workerPoints = [

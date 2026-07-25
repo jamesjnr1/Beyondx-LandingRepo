@@ -12,7 +12,7 @@ const blocks = [
   {
     eyebrow: 'How we work',
     title: 'Every worker certified. Every shift GPS-verified.',
-    body: 'Every worker completes skills certification and carries a digital work record tracked in real time. Every employer receives GPS-verified attendance logs and dedicated coordinator support.',
+    body: 'Every worker completes skills certification and carries a digital work record tracked in real time. Every employer receives GPS-verified attendance logs and responsive support if anything comes up.',
     image: 'https://images.pexels.com/photos/8961342/pexels-photo-8961342.jpeg?auto=compress&cs=tinysrgb&w=1200',
     alt: 'Workers collaborating on site',
     reverse: true,
