@@ -6,6 +6,7 @@ import { auth, session, referral, contact, ApiError } from '../../lib/api'
 import OnboardingQuestions from './OnboardingQuestions'
 import * as v from '../../lib/validate'
 import { categories, remoteCategories } from '../../data'
+import GoogleSignInButton from './GoogleSignInButton'
 
 const REGIONS = [
   'Greater Accra', 'Ashanti', 'Western', 'Central', 'Eastern',
@@ -74,7 +75,7 @@ function Field({ label, value, onChange, error, ...rest }: { label: string; valu
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-err` : undefined}
-        className={`w-full rounded-lg border bg-white px-4 py-2.5 text-ink-900 outline-none transition-colors placeholder:text-ink-700/40 focus:ring-2 ${error ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : 'border-ink-900/15 focus:border-forest-500 focus:ring-forest-500/20'}`}
+        className={`w-full rounded-lg border bg-white px-4 py-2.5 text-ink-900 outline-none transition-colors placeholder:text-ink-700/40 focus:ring-2 disabled:bg-forest-600/5 disabled:text-ink-700 ${error ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : 'border-ink-900/15 focus:border-forest-500 focus:ring-forest-500/20'}`}
         {...rest}
       />
       {error && <p id={`${id}-err`} className="mt-1 text-xs text-red-700">{error}</p>}
@@ -210,7 +211,12 @@ function EmployerRegister() {
   const [step, setStep] = useState(1)
   const [f, setF] = useState({ org: '', contact: '', phone: '', region: '', email: '', password: '' })
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({})
-  const set = (k: keyof typeof f) => (v: string) => setF({ ...f, [k]: v })
+  const [googleVerified, setGoogleVerified] = useState(false)
+  const set = (k: keyof typeof f) => (v: string) => {
+    // Typing a new email by hand means it's no longer the Google-verified one.
+    if (k === 'email' && googleVerified) setGoogleVerified(false)
+    setF({ ...f, [k]: v })
+  }
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const validateStep = (n: number) => {
@@ -266,7 +272,35 @@ function EmployerRegister() {
           <Select label="Region" options={REGIONS} placeholder="Select a region" value={f.region} onChange={set('region')} error={fieldErr.region} />
         </>)}
         {step === 2 && (<>
-          <Field label="Email Address" type="email" placeholder="you@company.com" value={f.email} onChange={set('email')} error={fieldErr.email} />
+          <GoogleSignInButton
+            onVerified={(profile) => {
+              setF((prev) => ({ ...prev, email: profile.email, contact: prev.contact || profile.name }))
+              setGoogleVerified(true)
+              setFieldErr((prev) => ({ ...prev, email: '' }))
+            }}
+            onError={(m) => setErr(m)}
+          />
+          <div className="flex items-center gap-3 text-xs text-ink-700/50">
+            <span className="h-px flex-1 bg-ink-900/10" />
+            or enter your email
+            <span className="h-px flex-1 bg-ink-900/10" />
+          </div>
+          <div>
+            <Field
+              label="Email Address"
+              type="email"
+              placeholder="you@company.com"
+              value={f.email}
+              onChange={set('email')}
+              error={fieldErr.email}
+              disabled={googleVerified}
+            />
+            {googleVerified && (
+              <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-forest-700">
+                <ShieldCheck size={13} aria-hidden="true" /> Verified by Google
+              </p>
+            )}
+          </div>
           <Field label="Password" type="password" placeholder="At least 8 characters" value={f.password} onChange={set('password')} error={fieldErr.password} />
         </>)}
         <FormError message={err} />
