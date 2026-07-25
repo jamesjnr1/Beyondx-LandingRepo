@@ -21,9 +21,13 @@ function SectionLabel({ children }: { children: string }) {
   )
 }
 
-/** Compact card used in the two-column grids — image, icon badge, title, and a
- *  short description that only appears from `sm:` up. Keeping mobile tiles
- *  small (not full-width) is what actually cuts the scroll length down. */
+/** Photo on top, title and description below in normal document flow — never
+ *  overlaid on the image. Text laid over a fixed-height photo has to be
+ *  clipped by `overflow-hidden` the moment it needs more room than the photo
+ *  allows, which is exactly what happens when the accessibility text-size
+ *  setting is turned up. Putting the text in its own block below means the
+ *  card simply grows taller instead — safe at any text size, and nothing is
+ *  ever hidden to save space. */
 function CategoryTile({
   image,
   title,
@@ -41,27 +45,28 @@ function CategoryTile({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.35, margin: '0px 0px -10% 0px' }}
+      viewport={{ once: true, amount: 0.3, margin: '0px 0px -10% 0px' }}
       transition={{ duration: 0.45, delay }}
-      className="img-zoom group relative overflow-hidden rounded-xl sm:rounded-2xl"
+      className="overflow-hidden rounded-xl bg-cream-50 shadow-sm ring-1 ring-ink-900/5 sm:rounded-2xl"
     >
-      <img
-        src={image}
-        alt={title}
-        className="aspect-square w-full object-cover sm:aspect-[4/3]"
-        loading="lazy"
-        decoding="async"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-ink-950/85 via-ink-950/25 to-transparent sm:from-ink-950/80 sm:via-ink-950/20" />
-      <div className="absolute inset-0 flex flex-col justify-end p-3 sm:p-6">
-        <div className="mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-cream-50/15 backdrop-blur-sm transition-all duration-300 group-hover:bg-cream-50/25 group-hover:scale-110 sm:mb-3 sm:h-10 sm:w-10 sm:rounded-xl">
-          <Icon size={14} className="text-cream-50 sm:hidden" />
-          <Icon size={20} className="hidden text-cream-50 sm:block" />
+      <div className="img-zoom relative overflow-hidden">
+        <img
+          src={image}
+          alt=""
+          className="aspect-[4/3] w-full object-cover"
+          loading="lazy"
+          decoding="async"
+        />
+        <div className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-lg bg-ink-950/40 backdrop-blur-sm sm:h-9 sm:w-9">
+          <Icon size={14} className="text-cream-50 sm:hidden" aria-hidden="true" />
+          <Icon size={18} className="hidden text-cream-50 sm:block" aria-hidden="true" />
         </div>
-        <h3 className="font-serif text-sm font-semibold leading-tight text-cream-50 sm:text-xl">
+      </div>
+      <div className="p-2.5 sm:p-4">
+        <h3 className="font-serif text-[13px] font-semibold leading-tight text-ink-900 sm:text-lg">
           {title}
         </h3>
-        <p className="mt-1 hidden text-sm leading-relaxed text-cream-200/80 text-pretty sm:block">
+        <p className="mt-1 text-xs leading-snug text-ink-700 text-pretty sm:mt-1.5 sm:text-sm sm:leading-relaxed">
           {description}
         </p>
       </div>
@@ -90,11 +95,11 @@ export default function WorkerCategories() {
           </p>
         </div>
 
-        {/* On the field — one featured tile up top, then a compact grid. Seven
-            items never divide evenly, so the odd one out becomes the lead
-            rather than being stranded alone on its own row. Two columns from
-            the base breakpoint keeps this short on a phone instead of forcing
-            seven full-width tiles in a row. */}
+        {/* On the field — one featured tile up top, then a compact grid.
+            Seven items never divide evenly into a grid, so rather than leave
+            one tile stranded on its own row, the odd one out becomes the
+            lead. Its text sits below the photo too, for the same reason as
+            the grid tiles: never clipped, however large the text gets. */}
         <div className="mt-10 sm:mt-16">
           <SectionLabel>On the field</SectionLabel>
 
@@ -102,25 +107,26 @@ export default function WorkerCategories() {
             initial={{ opacity: 0, y: 20 }}
             animate={visible ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.5 }}
-            className="img-zoom group relative overflow-hidden rounded-xl sm:rounded-2xl"
+            className="overflow-hidden rounded-xl bg-cream-50 shadow-sm ring-1 ring-ink-900/5 sm:rounded-2xl"
           >
-            <img
-              src={featured.image}
-              alt={featured.title}
-              className="aspect-[4/3] w-full object-cover sm:aspect-[16/9] lg:aspect-[21/9]"
-              loading="eager"
-              decoding="async"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-ink-950/85 via-ink-950/25 to-transparent" />
-            <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-8">
-              <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-cream-50/15 backdrop-blur-sm sm:mb-3 sm:h-11 sm:w-11 sm:rounded-xl">
-                <featured.icon size={18} className="text-cream-50 sm:hidden" />
-                <featured.icon size={22} className="hidden text-cream-50 sm:block" />
+            <div className="img-zoom relative overflow-hidden">
+              <img
+                src={featured.image}
+                alt=""
+                className="aspect-[16/10] w-full object-cover sm:aspect-[21/9]"
+                loading="eager"
+                decoding="async"
+              />
+              <div className="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-xl bg-ink-950/40 backdrop-blur-sm sm:h-11 sm:w-11">
+                <featured.icon size={18} className="text-cream-50 sm:hidden" aria-hidden="true" />
+                <featured.icon size={22} className="hidden text-cream-50 sm:block" aria-hidden="true" />
               </div>
-              <h3 className="font-serif text-lg font-semibold text-cream-50 sm:text-2xl lg:text-3xl">
+            </div>
+            <div className="p-4 sm:p-6 lg:p-8">
+              <h3 className="font-serif text-lg font-semibold text-ink-900 sm:text-2xl lg:text-3xl">
                 {featured.title}
               </h3>
-              <p className="mt-1 max-w-md text-xs leading-relaxed text-cream-200/85 text-pretty sm:text-sm lg:text-base">
+              <p className="mt-1.5 max-w-md text-sm leading-relaxed text-ink-700 text-pretty sm:mt-2 sm:text-base">
                 {featured.description}
               </p>
             </div>
@@ -140,10 +146,10 @@ export default function WorkerCategories() {
           </div>
         </div>
 
-        {/* Remote — same card system as the field grid, now with real photos
-            rather than a solid colour stand-in. Six items split evenly into
-            two rows regardless of column count, so there's no orphan tile
-            here either. */}
+        {/* Remote — same card system as the field grid, real photos rather
+            than a solid colour stand-in. Six items split evenly into two
+            rows regardless of column count, so there's no orphan tile here
+            either. */}
         <div className="mt-10 sm:mt-20">
           <SectionLabel>Remote</SectionLabel>
 

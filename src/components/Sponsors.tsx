@@ -48,7 +48,7 @@ export default function Sponsors() {
               initial={{ opacity: 0, y: 24 }}
               animate={visible ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: i * 0.12 }}
-              className="flex min-w-[78%] shrink-0 snap-center flex-col rounded-2xl border border-ink-900/8 bg-cream-50 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg sm:min-w-0 sm:shrink sm:p-8"
+              className="flex w-[78%] shrink-0 snap-center flex-col rounded-2xl border border-ink-900/8 bg-cream-50 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg sm:w-auto sm:shrink sm:p-8"
             >
               <span className="text-sm font-semibold uppercase tracking-widest text-clay-500">{t.name}</span>
               <span className="mt-3 font-serif text-3xl font-medium text-ink-900">{t.amount}</span>

@@ -38,7 +38,7 @@ export default function Pillars() {
               initial={{ opacity: 0, y: 30 }}
               animate={visible ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.6, delay: i * 0.15 }}
-              className="h-full min-w-[78%] shrink-0 snap-center rounded-2xl border border-cream-50/10 bg-cream-50/5 p-5 text-center transition-all duration-300 hover:border-forest-400/30 hover:bg-cream-50/10 sm:min-w-0 sm:shrink sm:p-8"
+              className="h-full w-[78%] shrink-0 snap-center rounded-2xl border border-cream-50/10 bg-cream-50/5 p-5 text-center transition-all duration-300 hover:border-forest-400/30 hover:bg-cream-50/10 sm:w-auto sm:shrink sm:p-8"
             >
               <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-forest-400 to-forest-600 shadow-lg shadow-forest-900/40 sm:mb-5 sm:h-14 sm:w-14 sm:rounded-2xl">
                 <span className="font-serif text-base font-bold text-cream-50 sm:text-xl">

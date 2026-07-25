@@ -39,10 +39,10 @@ export default function HowItWorks() {
                 <div className="mb-1.5 font-serif text-2xl font-bold text-clay-400/40 transition-colors group-hover:text-clay-500 sm:mb-4 sm:text-5xl">
                   {step.number}
                 </div>
-                <h3 className="mb-1 text-sm font-semibold leading-tight text-ink-900 sm:mb-2 sm:text-lg">
+                <h3 className="mb-1 text-[13px] font-semibold leading-tight text-ink-900 sm:mb-2 sm:text-lg">
                   {step.title}
                 </h3>
-                <p className="text-[11px] leading-snug text-ink-700/80 sm:text-sm sm:leading-relaxed">
+                <p className="text-xs leading-snug text-ink-700/80 sm:text-sm sm:leading-relaxed">
                   {step.description}
                 </p>
               </div>
