@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode, type FormEvent, type InputHTMLAttributes } from 'react'
-import { X, ShieldCheck, ChevronLeft } from 'lucide-react'
+import { X, ShieldCheck, ChevronLeft, Mail } from 'lucide-react'
 import Logo from '../Logo'
 import { useAuth, type AuthView } from './AuthContext'
 import { auth, session, referral, contact, ApiError } from '../../lib/api'
@@ -7,6 +7,9 @@ import OnboardingQuestions from './OnboardingQuestions'
 import * as v from '../../lib/validate'
 import { categories, remoteCategories } from '../../data'
 import GoogleSignInButton from './GoogleSignInButton'
+import { supabase } from '../../lib/supabase'
+import VerifyEmailLanding from './VerifyEmailLanding'
+import { finishEmployerRegistration, savePendingEmployer } from './employerVerification'
 
 const REGIONS = [
   'Greater Accra', 'Ashanti', 'Western', 'Central', 'Eastern',
@@ -212,6 +215,8 @@ function EmployerRegister() {
   const [f, setF] = useState({ org: '', contact: '', phone: '', region: '', email: '', password: '' })
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({})
   const [googleVerified, setGoogleVerified] = useState(false)
+  const [awaitingVerification, setAwaitingVerification] = useState(false)
+  const [resent, setResent] = useState(false)
   const set = (k: keyof typeof f) => (v: string) => {
     // Typing a new email by hand means it's no longer the Google-verified one.
     if (k === 'email' && googleVerified) setGoogleVerified(false)
@@ -227,6 +232,22 @@ function EmployerRegister() {
     return Object.keys(errs).length === 0
   }
 
+  const sendVerificationEmail = async () => {
+    if (!supabase) return false
+    const { error } = await supabase.auth.signUp({
+      email: f.email.trim(),
+      password: f.password,
+      options: { emailRedirectTo: window.location.origin + '/' },
+    })
+    // "already registered" from Supabase's own store just means someone
+    // started this before — either way, the verification email still goes
+    // out, so treat it the same as a fresh send.
+    if (error && !/already registered|already exists/i.test(error.message)) {
+      throw new Error(error.message)
+    }
+    return true
+  }
+
   const next = async (e: FormEvent) => {
     e.preventDefault()
     if (!validateStep(step)) return
@@ -234,32 +255,55 @@ function EmployerRegister() {
     if (busy) return
     setErr(null); setBusy(true)
     try {
-      const data = await auth.employerRegister({
-        email: f.email.trim(), password: f.password, orgName: f.org.trim(),
-        contactPerson: f.contact.trim(), phone: f.phone.trim(), region: f.region,
-      })
-      session.saveEmployer(data.token, data.employer)
-      // Fire and forget — a failed notification must not block the signup.
-      contact.send({
-        name: f.org.trim(),
-        email: f.email.trim(),
-        phone: f.phone.trim(),
-        message:
-          `A new employer account was created.\n\n` +
-          `Organisation: ${f.org.trim()}\n` +
-          `Contact person: ${f.contact.trim()}\n` +
-          `Phone: ${f.phone.trim()}\n` +
-          `Email: ${f.email.trim()}\n` +
-          `Region: ${f.region}\n\n` +
-          `Onboarding answers will follow in a separate email if they complete them.`,
-        category: 'employer_registered',
-      }).catch(() => null)
-      open('employer-onboarding')
+      if (googleVerified || !supabase) {
+        // Google already proved this email is real, so create the account
+        // immediately. If Supabase isn't configured on this deployment yet,
+        // fall back to the same immediate behaviour rather than blocking
+        // sign-ups on a feature that isn't set up.
+        await finishEmployerRegistration({ ...f })
+        open('employer-onboarding')
+      } else {
+        // Plain email + password: hold the details, send a verification
+        // email, and only create the Railway account once that link is
+        // clicked and the email is confirmed as real.
+        savePendingEmployer({ ...f })
+        await sendVerificationEmail()
+        setAwaitingVerification(true)
+      }
     } catch (e2) {
       setErr(errText(e2))
     } finally {
       setBusy(false)
     }
+  }
+
+  if (awaitingVerification) {
+    return (
+      <Modal title="Check your email" subtitle="One more step to confirm it's really you">
+        <div className="space-y-4 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-forest-600/10">
+            <Mail size={26} className="text-forest-600" />
+          </div>
+          <p className="text-sm leading-relaxed text-ink-700">
+            We sent a verification link to <span className="font-semibold text-ink-900">{f.email}</span>.
+            Open it on this device to finish creating your account.
+          </p>
+          <p className="text-xs text-ink-700/70">
+            Didn&rsquo;t get it? Check spam, or
+          </p>
+          <button
+            type="button"
+            disabled={resent}
+            onClick={async () => {
+              try { await sendVerificationEmail(); setResent(true) } catch { /* keep the screen as-is */ }
+            }}
+            className="text-sm font-medium text-forest-700 underline-offset-2 hover:underline disabled:text-ink-700/40 disabled:no-underline"
+          >
+            {resent ? 'Sent again — check your inbox' : 'Resend the email'}
+          </button>
+        </div>
+      </Modal>
+    )
   }
   return (
     <Modal title="Create Employer Account" subtitle="Join BeyondX and start hiring verified workers">
@@ -531,6 +575,7 @@ export default function AuthModals() {
     case 'worker-register': return <WorkerRegister />
     case 'employer-onboarding': return <EmployerOnboarding />
     case 'worker-onboarding': return <WorkerOnboarding />
+    case 'email-verification': return <VerifyEmailLanding />
     default: return null
   }
 }
