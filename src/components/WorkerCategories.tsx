@@ -86,12 +86,12 @@ export default function WorkerCategories() {
             What our workers do
           </span>
           <h2 className="font-serif text-2xl font-medium leading-tight text-ink-900 text-balance sm:text-4xl lg:text-5xl">
-            Certified across{' '}
+            Vetted across{' '}
             <span className="italic gradient-text">every category</span>
           </h2>
           <p className="mt-3 text-base text-ink-700 text-pretty sm:mt-4 sm:text-lg">
-            Workers are certified and matched to employer needs throughout
-            Ghana &mdash; on site or remote.
+            Workers are vetted and matched to employer needs throughout
+            Greater Accra &mdash; on site or remote.
           </p>
         </div>
 

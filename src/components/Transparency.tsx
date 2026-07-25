@@ -14,7 +14,7 @@ const workerPoints = [
   'This platform helps you build a verified record through honest work and fair pay',
   'You have the right to fair pay, respectful treatment, and to report any employer who treats you unfairly',
   'More completed jobs means a stronger profile and access to better opportunities',
-  'Your work speaks for you here, not your history',
+  'Your work speaks for you here.',
 ]
 
 function NoticeCard({

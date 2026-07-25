@@ -201,10 +201,10 @@ export const pillars: Pillar[] = [
   {
     title: 'Economic Dignity',
     description:
-      'Workers earn a fair market wage, paid promptly via mobile money. Earnings support both individual reintegration and family stability.',
+      'Workers earn a fair market wage, paid promptly via mobile money. Earnings support both the worker and family stability.',
   },
   {
-    title: 'Lasting Reintegration',
+    title: 'Lasting Opportunity',
     description:
       'BeyondX is not a one-time placement — it is a pathway. Workers build verified records that open doors to permanent employment.',
   },

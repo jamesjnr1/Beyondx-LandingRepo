@@ -368,6 +368,9 @@ function WorkerRegister() {
   const { open } = useAuth()
   const [step, setStep] = useState(1)
   const [f, setF] = useState({ name: '', phone: '', facility: '', gName: '', gPhone: '', relationship: '', pin: '' })
+  // Google sign-up is optional for workers — most authenticate by phone+PIN
+  // alone. If used, it just verifies an email to attach to the account.
+  const [googleEmail, setGoogleEmail] = useState<string | null>(null)
   // Remote work is not offered on accounts that name a facility.
   const remoteLocked = Boolean(f.facility)
   useEffect(() => {
@@ -417,12 +420,15 @@ function WorkerRegister() {
         guarantorPhone: f.gPhone.trim(), guarantorRelationship: f.relationship,
       }
       const ref = referral.get()
+      const extra: Record<string, string> = {}
+      if (ref) extra.referredBy = ref
+      if (googleEmail) extra.email = googleEmail
       let data
-      if (ref) {
-        // Send the referral code, but never let it block a signup: if the
-        // backend rejects the extra field, register again without it.
+      if (Object.keys(extra).length) {
+        // Send the extras, but never let them block a signup: if the backend
+        // rejects a field it doesn't recognise, register again without it.
         try {
-          data = await auth.workerRegister({ ...base, referredBy: ref })
+          data = await auth.workerRegister({ ...base, ...extra })
         } catch (err) {
           if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
             data = await auth.workerRegister(base)
@@ -442,6 +448,7 @@ function WorkerRegister() {
           `A new worker account was created.\n\n` +
           `Name: ${f.name.trim()}\n` +
           `Phone: ${f.phone.trim()}\n` +
+          (googleEmail ? `Email: ${googleEmail} (verified via Google)\n` : '') +
           `Skills: ${skills.join(', ') || '—'}\n` +
           `Guarantor: ${f.gName.trim()} (${f.gPhone.trim()}, ${f.relationship})\n\n` +
           `Onboarding answers will follow in a separate email if they complete them.`,
@@ -462,6 +469,25 @@ function WorkerRegister() {
           <Field label="Full Name" value={f.name} onChange={set('name')} error={fieldErr.name} />
           <Field label="Phone Number" type="tel" placeholder="0241234567" value={f.phone} onChange={set('phone')} error={fieldErr.phone} />
           <Select label="Prison Facility (optional)" options={FACILITIES} placeholder="Not applicable" value={f.facility} onChange={set('facility')} />
+
+          <div className="flex items-center gap-3 pt-1 text-xs text-ink-700/50">
+            <span className="h-px flex-1 bg-ink-900/10" />
+            or sign up with Google (optional)
+            <span className="h-px flex-1 bg-ink-900/10" />
+          </div>
+          {googleEmail ? (
+            <p className="flex items-center gap-1.5 rounded-lg bg-forest-600/10 px-3 py-2 text-xs font-medium text-forest-700">
+              <ShieldCheck size={13} aria-hidden="true" /> Verified: {googleEmail}
+            </p>
+          ) : (
+            <GoogleSignInButton
+              onVerified={(profile) => {
+                setGoogleEmail(profile.email)
+                if (!f.name.trim()) setF((prev) => ({ ...prev, name: profile.name }))
+              }}
+              onError={(m) => setErr(m)}
+            />
+          )}
         </>)}
         {step === 2 && (
           <div>
