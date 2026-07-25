@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, Star, Send, Phone, Plus, X, ShieldCheck, CircleCheck, Info, RefreshCw, AlertCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Star, Send, Phone, Plus, X, ShieldCheck, CircleCheck, Info, RefreshCw, AlertCircle, Copy, Check } from 'lucide-react'
 import DashboardHeader from './DashboardHeader'
 import ProfileModal from '../components/ProfileModal'
 import Toast, { type ToastMsg } from '../components/Toast'
@@ -355,6 +355,43 @@ export default function EmployerDashboard() {
   )
 }
 
+/** Plain text plus a copy button, instead of a tel: link. On desktop, clicking
+ *  a bare tel: link throws up the OS's "which app should open this?" dialog —
+ *  jarring and useless on a hiring dashboard nobody's using from a phone. */
+function PhoneCopy({ phone }: { phone: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(phone)
+      } else {
+        const el = document.createElement('textarea')
+        el.value = phone
+        el.style.position = 'fixed'
+        el.style.opacity = '0'
+        document.body.appendChild(el)
+        el.select()
+        document.execCommand('copy')
+        document.body.removeChild(el)
+      }
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    } catch { /* clipboard unavailable — the number is still visible to copy by hand */ }
+  }
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      aria-label={`Copy phone number ${phone}`}
+      className="inline-flex items-center gap-2 rounded-lg px-1 py-0.5 text-sm font-medium text-ink-900 transition-colors hover:bg-ink-900/5 hover:text-forest-700"
+    >
+      <Phone size={15} aria-hidden="true" className="text-forest-600" />
+      {phone}
+      {copied ? <Check size={13} aria-hidden="true" className="text-forest-600" /> : <Copy size={13} aria-hidden="true" className="text-ink-700/50" />}
+    </button>
+  )
+}
+
 function WorkerProfileModal({ worker, category, onClose, onDispatch }: { worker: Worker; category?: string | null; onClose: () => void; onDispatch: () => void }) {
   useEsc(onClose)
   const skills = wSkills(worker)
@@ -417,9 +454,7 @@ function WorkerProfileModal({ worker, category, onClose, onDispatch }: { worker:
             {worker.phone ? (
               <div>
                 <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-clay-500">Contact</h3>
-                <a href={`tel:${worker.phone}`} className="inline-flex items-center gap-2 text-sm font-medium text-ink-900 hover:text-forest-700">
-                  <Phone size={15} aria-hidden="true" className="text-forest-600" /> {worker.phone as string}
-                </a>
+                <PhoneCopy phone={worker.phone as string} />
               </div>
             ) : null}
 

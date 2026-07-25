@@ -6,7 +6,7 @@ const socials = [
   { icon: Instagram, href: 'https://instagram.com/beyondx26', label: 'Instagram' },
   { icon: Music2, href: 'https://www.tiktok.com/@beyondx26', label: 'TikTok' },
   { icon: Twitter, href: 'https://x.com/beyondx26', label: 'X' },
-  { icon: Linkedin, href: 'https://www.linkedin.com/company/beyondx', label: 'LinkedIn' },
+  { icon: Linkedin, href: 'https://www.linkedin.com/company/beyondx26/?viewAsMember=true', label: 'LinkedIn' },
   { icon: Mail, href: 'mailto:beyondx26@gmail.com', label: 'Email' },
 ]
 
