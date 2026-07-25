@@ -23,8 +23,8 @@ export default function About() {
   const { ref, visible } = useReveal()
 
   return (
-    <section id="about" ref={ref} className="relative overflow-hidden py-24 sm:py-32">
-      <div className="mx-auto max-w-7xl space-y-24 px-5 sm:px-8 sm:space-y-32">
+    <section id="about" ref={ref} className="relative overflow-hidden py-14 sm:py-32">
+      <div className="mx-auto max-w-7xl space-y-12 px-5 sm:px-8 sm:space-y-32">
         {blocks.map((block, i) => (
           <div
             key={i}
@@ -37,10 +37,10 @@ export default function About() {
               animate={visible ? { opacity: 1, x: 0 } : {}}
               transition={{ duration: 0.7, delay: i * 0.1 }}
             >
-              <span className="mb-4 inline-block text-sm font-semibold uppercase tracking-widest text-clay-500">
+              <span className="mb-2 inline-block text-sm font-semibold uppercase tracking-widest text-clay-500 sm:mb-4">
                 {block.eyebrow}
               </span>
-              <h2 className="font-serif text-3xl font-medium leading-tight text-ink-900 text-balance sm:text-4xl lg:text-5xl">
+              <h2 className="font-serif text-2xl font-medium leading-tight text-ink-900 text-balance sm:text-4xl lg:text-5xl">
                 {block.title.split(' ').map((word, wi) => (
                   <span key={wi}>
                     {wi === Math.floor(block.title.split(' ').length / 2) ? (
@@ -51,7 +51,7 @@ export default function About() {
                   </span>
                 ))}
               </h2>
-              <p className="mt-6 max-w-md text-lg leading-relaxed text-ink-700 text-pretty">
+              <p className="mt-3 max-w-md text-base leading-relaxed text-ink-700 text-pretty sm:mt-6 sm:text-lg">
                 {block.body}
               </p>
             </motion.div>
@@ -65,7 +65,7 @@ export default function About() {
               <img
                 src={block.image}
                 alt={block.alt}
-                className="aspect-[4/3] w-full object-cover"
+                className="aspect-[16/10] w-full object-cover sm:aspect-[4/3]"
                 loading="lazy"
               />
             </motion.div>

@@ -8,7 +8,7 @@ export default function CTA() {
   const { open } = useAuth()
 
   return (
-    <section id="cta" ref={ref} className="relative overflow-hidden py-24 sm:py-32">
+    <section id="cta" ref={ref} className="relative overflow-hidden py-14 sm:py-32">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}

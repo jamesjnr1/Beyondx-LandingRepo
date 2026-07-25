@@ -6,7 +6,7 @@ export default function Testimonial() {
   const { ref, visible } = useReveal()
 
   return (
-    <section ref={ref} className="relative overflow-hidden py-24 sm:py-32">
+    <section ref={ref} className="relative overflow-hidden py-14 sm:py-32">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-forest-400/8 blur-[120px]" />
       </div>
@@ -21,9 +21,9 @@ export default function Testimonial() {
           <span className="mb-4 inline-block text-sm font-semibold uppercase tracking-widest text-clay-500">
             A Message From Our CEO
           </span>
-          <Quote size={40} aria-hidden="true" className="mx-auto mb-6 text-clay-400/50" />
+          <Quote size={28} aria-hidden="true" className="mx-auto mb-4 text-clay-400/50 sm:mb-6 sm:size-10" />
 
-          <blockquote className="font-serif text-2xl font-medium leading-relaxed text-ink-900 text-pretty sm:text-3xl lg:text-4xl">
+          <blockquote className="font-serif text-lg font-medium leading-relaxed text-ink-900 text-pretty sm:text-3xl lg:text-4xl">
             "BeyondX exists because a record should mark where someone has been,
             not where they're stuck. Every job completed on our platform
             builds proof of skill and reliability — the kind that gets someone
@@ -31,8 +31,8 @@ export default function Testimonial() {
             <span className="italic gradient-text">Same hands, new start.</span>"
           </blockquote>
 
-          <div className="mt-8 flex flex-col items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-forest-500 to-forest-700 font-serif text-lg font-bold text-cream-50 shadow-md">
+          <div className="mt-5 flex flex-col items-center gap-2 sm:mt-8 sm:gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-forest-500 to-forest-700 font-serif text-base font-bold text-cream-50 shadow-md sm:h-14 sm:w-14 sm:text-lg">
               SA
             </div>
             <div>

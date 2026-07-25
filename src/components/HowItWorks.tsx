@@ -9,7 +9,7 @@ export default function HowItWorks() {
     <section
       id="how"
       ref={ref}
-      className="relative overflow-hidden bg-cream-100 py-24 sm:py-32"
+      className="relative overflow-hidden bg-cream-100 py-14 sm:py-32"
     >
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="mx-auto max-w-2xl text-center">
@@ -26,7 +26,7 @@ export default function HowItWorks() {
           </p>
         </div>
 
-        <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:mt-16 sm:gap-6 lg:grid-cols-4">
           {steps.map((step, i) => (
             <motion.div
               key={step.number}
@@ -35,14 +35,14 @@ export default function HowItWorks() {
               transition={{ duration: 0.5, delay: i * 0.12 }}
               className="group relative"
             >
-              <div className="h-full rounded-2xl border border-ink-900/8 bg-cream-50 p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-                <div className="mb-4 font-serif text-5xl font-bold text-clay-400/40 transition-colors group-hover:text-clay-500">
+              <div className="h-full rounded-xl border border-ink-900/8 bg-cream-50 p-3.5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg sm:rounded-2xl sm:p-6">
+                <div className="mb-1.5 font-serif text-2xl font-bold text-clay-400/40 transition-colors group-hover:text-clay-500 sm:mb-4 sm:text-5xl">
                   {step.number}
                 </div>
-                <h3 className="mb-2 text-lg font-semibold text-ink-900">
+                <h3 className="mb-1 text-sm font-semibold leading-tight text-ink-900 sm:mb-2 sm:text-lg">
                   {step.title}
                 </h3>
-                <p className="text-sm leading-relaxed text-ink-700/80">
+                <p className="text-[11px] leading-snug text-ink-700/80 sm:text-sm sm:leading-relaxed">
                   {step.description}
                 </p>
               </div>

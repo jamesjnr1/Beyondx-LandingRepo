@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useReveal } from '../hooks/useReveal'
 import { CircleCheck as CheckCircle } from 'lucide-react'
@@ -16,80 +17,102 @@ const workerPoints = [
   'Your work speaks for you here, not your history',
 ]
 
+function NoticeCard({
+  audience,
+  heading,
+  points,
+  dotColor,
+}: {
+  audience: 'employer' | 'worker'
+  heading: string
+  points: string[]
+  dotColor: string
+}) {
+  return (
+    <div className="h-full rounded-2xl border border-ink-900/8 bg-cream-50 p-5 shadow-sm sm:p-8">
+      <h3 className="mb-1 font-serif text-lg font-semibold text-ink-900 sm:mb-6 sm:text-xl">
+        {audience === 'employer' ? 'For Employers' : 'For Workers'}
+      </h3>
+      <p className="mb-4 text-sm font-medium text-ink-700 sm:-mt-4 sm:mb-5">{heading}</p>
+      <ul className="space-y-3 sm:space-y-4">
+        {points.map((point) => (
+          <li key={point} className="flex items-start gap-3">
+            <CheckCircle size={18} className={`mt-0.5 shrink-0 ${dotColor} sm:size-5`} />
+            <span className="text-sm leading-relaxed text-ink-700">{point}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export default function Transparency() {
   const { ref, visible } = useReveal()
+  const [audience, setAudience] = useState<'employer' | 'worker'>('employer')
 
   return (
-    <section ref={ref} className="relative overflow-hidden bg-cream-100 py-24 sm:py-32">
+    <section ref={ref} className="relative overflow-hidden bg-cream-100 py-14 sm:py-32">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <span className="mb-4 inline-block text-sm font-semibold uppercase tracking-widest text-clay-500">
+          <span className="mb-3 inline-block text-sm font-semibold uppercase tracking-widest text-clay-500 sm:mb-4">
             Our Commitments
           </span>
-          <h2 className="font-serif text-3xl font-medium leading-tight text-ink-900 text-balance sm:text-4xl lg:text-5xl">
+          <h2 className="font-serif text-2xl font-medium leading-tight text-ink-900 text-balance sm:text-4xl lg:text-5xl">
             Transparency on{' '}
             <span className="italic gradient-text">both sides.</span>
           </h2>
-          <p className="mt-4 text-lg text-ink-700 text-pretty">
+          <p className="mt-3 text-base text-ink-700 text-pretty sm:mt-4 sm:text-lg">
             BeyondX makes clear commitments to every employer and every worker on this platform.
           </p>
         </div>
 
-        <div className="mt-16 grid gap-6 lg:grid-cols-2">
+        {/* Both cards carry four bullet points each — full length on a phone.
+            A toggle shows one at a time on mobile (same pattern used in the
+            employer dashboard's field/remote switch), and both sit side by
+            side from `lg:` up where there's room. */}
+        <div className="mt-6 flex justify-center gap-2 lg:hidden">
+          {(['employer', 'worker'] as const).map((a) => (
+            <button
+              key={a}
+              onClick={() => setAudience(a)}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                audience === a
+                  ? 'bg-ink-900 text-cream-50'
+                  : 'bg-ink-900/5 text-ink-700 hover:bg-ink-900/10'
+              }`}
+            >
+              {a === 'employer' ? 'For Employers' : 'For Workers'}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-5 grid gap-6 sm:mt-8 lg:mt-16 lg:grid-cols-2">
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={visible ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.6 }}
-            className="rounded-2xl border border-ink-900/8 bg-cream-50 p-8 shadow-sm"
+            className={audience === 'employer' ? 'block' : 'hidden lg:block'}
           >
-            <h3 className="mb-6 font-serif text-xl font-semibold text-ink-900">
-              For Employers
-            </h3>
-            <p className="-mt-4 mb-5 text-sm font-medium text-ink-700">
-              Our Verification Standard
-            </p>
-            <ul className="space-y-4">
-              {employerPoints.map((point, i) => (
-                <motion.li
-                  key={point}
-                  initial={{ opacity: 0, x: -15 }}
-                  animate={visible ? { opacity: 1, x: 0 } : {}}
-                  transition={{ duration: 0.4, delay: 0.2 + i * 0.1 }}
-                  className="flex items-start gap-3"
-                >
-                  <CheckCircle size={20} className="mt-0.5 shrink-0 text-forest-600" />
-                  <span className="text-sm leading-relaxed text-ink-700">{point}</span>
-                </motion.li>
-              ))}
-            </ul>
+            <NoticeCard
+              audience="employer"
+              heading="Our Verification Standard"
+              points={employerPoints}
+              dotColor="text-forest-600"
+            />
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             animate={visible ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.15 }}
-            className="rounded-2xl border border-ink-900/8 bg-cream-50 p-8 shadow-sm"
+            className={audience === 'worker' ? 'block' : 'hidden lg:block'}
           >
-            <h3 className="mb-6 font-serif text-xl font-semibold text-ink-900">
-              For Workers
-            </h3>
-            <p className="-mt-4 mb-5 text-sm font-medium text-ink-700">
-              Welcome. You Belong Here.
-            </p>
-            <ul className="space-y-4">
-              {workerPoints.map((point, i) => (
-                <motion.li
-                  key={point}
-                  initial={{ opacity: 0, x: 15 }}
-                  animate={visible ? { opacity: 1, x: 0 } : {}}
-                  transition={{ duration: 0.4, delay: 0.3 + i * 0.1 }}
-                  className="flex items-start gap-3"
-                >
-                  <CheckCircle size={20} className="mt-0.5 shrink-0 text-clay-500" />
-                  <span className="text-sm leading-relaxed text-ink-700">{point}</span>
-                </motion.li>
-              ))}
-            </ul>
+            <NoticeCard
+              audience="worker"
+              heading="Welcome. You Belong Here."
+              points={workerPoints}
+              dotColor="text-clay-500"
+            />
           </motion.div>
         </div>
 
@@ -97,9 +120,9 @@ export default function Transparency() {
           initial={{ opacity: 0, y: 20 }}
           animate={visible ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.5 }}
-          className="mx-auto mt-10 max-w-3xl rounded-xl border border-clay-400/30 bg-clay-400/8 p-5 text-center"
+          className="mx-auto mt-6 max-w-3xl rounded-xl border border-clay-400/30 bg-clay-400/8 p-4 text-center sm:mt-10 sm:p-5"
         >
-          <p className="text-sm leading-relaxed text-ink-700 text-pretty">
+          <p className="text-xs leading-relaxed text-ink-700 text-pretty sm:text-sm">
             <span className="font-semibold text-clay-600">Important:</span> Every
             worker on this platform is individually vetted by our team before being
             listed. Verification confirms identity and work-readiness. All workers

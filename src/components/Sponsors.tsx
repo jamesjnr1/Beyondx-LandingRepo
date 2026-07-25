@@ -23,7 +23,7 @@ export default function Sponsors() {
   const { ref, visible } = useReveal()
 
   return (
-    <section id="sponsors" ref={ref} className="relative bg-cream-100 py-24 sm:py-32">
+    <section id="sponsors" ref={ref} className="relative bg-cream-100 py-14 sm:py-32">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <span className="mb-4 inline-block text-sm font-semibold uppercase tracking-widest text-clay-500">
@@ -40,14 +40,14 @@ export default function Sponsors() {
           </p>
         </div>
 
-        <div className="mt-16 grid gap-6 md:grid-cols-3">
+        <div className="mt-8 -mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-2 sm:mt-16 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-6 sm:overflow-visible sm:px-0 sm:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tiers.map((t, i) => (
             <motion.div
               key={t.name}
               initial={{ opacity: 0, y: 24 }}
               animate={visible ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: i * 0.12 }}
-              className="flex flex-col rounded-2xl border border-ink-900/8 bg-cream-50 p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+              className="flex min-w-[78%] shrink-0 snap-center flex-col rounded-2xl border border-ink-900/8 bg-cream-50 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg sm:min-w-0 sm:shrink sm:p-8"
             >
               <span className="text-sm font-semibold uppercase tracking-widest text-clay-500">{t.name}</span>
               <span className="mt-3 font-serif text-3xl font-medium text-ink-900">{t.amount}</span>
@@ -55,6 +55,10 @@ export default function Sponsors() {
             </motion.div>
           ))}
         </div>
+
+        <p className="mt-3 text-center text-xs text-ink-700/50 sm:hidden">
+          Swipe to see all tiers &rarr;
+        </p>
       </div>
     </section>
   )
