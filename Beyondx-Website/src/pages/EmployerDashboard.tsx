@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, Star, Send, Phone, Plus, X, ShieldCheck, CircleCheck, Info, RefreshCw, AlertCircle, Copy, Check, Award } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Star, Send, Phone, Plus, X, ShieldCheck, ShieldAlert, CircleCheck, Info, RefreshCw, AlertCircle, Copy, Check, Award, Wrench } from 'lucide-react'
 import DashboardHeader from './DashboardHeader'
 import ProfileModal from '../components/ProfileModal'
 import Toast, { type ToastMsg } from '../components/Toast'
@@ -776,9 +776,11 @@ function TaskScreening({
   if (showResult) {
     return (
       <div className="mt-6">
-        <div className={`rounded-2xl p-6 text-center ring-2 ${highRisk ? 'bg-clay-400/8 ring-clay-400/40' : 'bg-forest-600/8 ring-forest-600/30'}`}>
-          <div className={`mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full text-2xl ${highRisk ? 'bg-clay-400/20' : 'bg-forest-600/15'}`}>
-            {highRisk ? '⚠️' : '✅'}
+        <div className={`rounded-2xl p-6 text-center ring-1 ${highRisk ? 'bg-clay-400/8 ring-clay-400/30' : 'bg-forest-600/8 ring-forest-600/20'}`}>
+          <div className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full ${highRisk ? 'bg-clay-400/20' : 'bg-forest-600/15'}`}>
+            {highRisk
+              ? <ShieldAlert size={22} aria-hidden="true" className="text-clay-700" />
+              : <ShieldCheck size={22} aria-hidden="true" className="text-forest-700" />}
           </div>
           <p className={`font-serif text-xl font-medium ${highRisk ? 'text-clay-800' : 'text-forest-900'}`}>
             {highRisk ? 'Restricted task' : 'Open to all workers'}
@@ -799,7 +801,7 @@ function TaskScreening({
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
             <button onClick={onDone}
               className={`rounded-full px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:scale-[1.02] active:scale-[0.98] ${highRisk ? 'bg-clay-600 hover:bg-clay-500' : 'bg-forest-600 hover:bg-forest-500'}`}>
-              See available workers →
+              See available workers
             </button>
             <button onClick={() => { setStepIdx(0); setShowResult(false); onUpdate(DEFAULT_SCREENING) }}
               className="rounded-full border border-ink-900/15 px-6 py-3 text-sm font-medium text-ink-700 hover:bg-ink-900/5">
@@ -836,14 +838,12 @@ function TaskScreening({
             <p className="mt-1.5 text-sm leading-relaxed text-ink-700/70">{current.hint}</p>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button onClick={() => current.type === 'risk' ? answerRisk(current.key, true) : answerToolsNeeded(true)}
-                className="flex flex-col items-center gap-1 rounded-xl border-2 border-clay-400/30 bg-clay-400/8 px-4 py-4 text-center font-semibold text-clay-700 transition-all hover:border-clay-500/60 hover:bg-clay-400/15 active:scale-[0.97]">
-                <span className="text-xl">✓ Yes</span>
-                <span className="text-xs font-normal text-clay-600/80">This applies</span>
+                className="flex items-center justify-center gap-2 rounded-xl border border-ink-900/15 bg-white px-4 py-3 text-sm font-medium text-ink-900 transition-colors hover:border-forest-600/50 hover:bg-forest-600/5 active:scale-[0.98]">
+                <Check size={16} aria-hidden="true" className="text-ink-700" /> Yes
               </button>
               <button onClick={() => current.type === 'risk' ? answerRisk(current.key, false) : answerToolsNeeded(false)}
-                className="flex flex-col items-center gap-1 rounded-xl border-2 border-forest-600/30 bg-forest-600/8 px-4 py-4 text-center font-semibold text-forest-700 transition-all hover:border-forest-600/60 hover:bg-forest-600/15 active:scale-[0.97]">
-                <span className="text-xl">✗ No</span>
-                <span className="text-xs font-normal text-forest-600/80">Doesn't apply</span>
+                className="flex items-center justify-center gap-2 rounded-xl border border-ink-900/15 bg-white px-4 py-3 text-sm font-medium text-ink-900 transition-colors hover:border-forest-600/50 hover:bg-forest-600/5 active:scale-[0.98]">
+                <X size={16} aria-hidden="true" className="text-ink-700" /> No
               </button>
             </div>
           </>
@@ -854,18 +854,16 @@ function TaskScreening({
           <>
             <p className="font-serif text-lg font-medium leading-snug text-ink-900">{current.question}</p>
             <p className="mt-1.5 text-sm leading-relaxed text-ink-700/70">{current.hint}</p>
-            <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button onClick={() => answerToolProvider('employer')}
-                className="flex flex-col items-center gap-1 rounded-xl border-2 border-forest-600/30 bg-forest-600/8 px-4 py-4 text-center transition-all hover:border-forest-600/60 hover:bg-forest-600/15 active:scale-[0.97]">
-                <span className="text-xl">🏢</span>
-                <span className="font-semibold text-forest-700">I will provide them</span>
-                <span className="text-xs text-forest-600/80">Standard rate</span>
+                className="flex flex-col gap-1 rounded-xl border border-ink-900/15 bg-white p-4 text-left transition-colors hover:border-forest-600/50 hover:bg-forest-600/5 active:scale-[0.98]">
+                <span className="text-sm font-medium text-ink-900">I will provide them</span>
+                <span className="text-xs text-ink-700/70">Standard rate</span>
               </button>
               <button onClick={() => answerToolProvider('worker')}
-                className="flex flex-col items-center gap-1 rounded-xl border-2 border-clay-400/30 bg-clay-400/8 px-4 py-4 text-center transition-all hover:border-clay-500/60 hover:bg-clay-400/15 active:scale-[0.97]">
-                <span className="text-xl">👷</span>
-                <span className="font-semibold text-clay-700">Worker brings tools</span>
-                <span className="text-xs text-clay-600/80">+15% surcharge</span>
+                className="flex flex-col gap-1 rounded-xl border border-ink-900/15 bg-white p-4 text-left transition-colors hover:border-forest-600/50 hover:bg-forest-600/5 active:scale-[0.98]">
+                <span className="text-sm font-medium text-ink-900">Worker brings tools</span>
+                <span className="text-xs text-ink-700/70">+15% surcharge</span>
               </button>
             </div>
           </>
@@ -877,14 +875,14 @@ function TaskScreening({
             <p className="font-serif text-lg font-medium leading-snug text-ink-900">{current.question}</p>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button onClick={() => answerTier('basic')}
-                className="flex flex-col gap-2 rounded-xl border-2 border-forest-600/30 bg-forest-600/8 p-4 text-left transition-all hover:border-forest-600/60 hover:bg-forest-600/15 active:scale-[0.97]">
-                <span className="font-semibold text-forest-800">{current.basicLabel}</span>
-                <span className="text-xs leading-relaxed text-forest-700/80">{current.basicExample}</span>
+                className="flex flex-col gap-2 rounded-xl border border-ink-900/15 bg-white p-4 text-left transition-colors hover:border-forest-600/50 hover:bg-forest-600/5 active:scale-[0.98]">
+                <span className="text-sm font-medium text-ink-900">{current.basicLabel}</span>
+                <span className="text-xs leading-relaxed text-ink-700/70">{current.basicExample}</span>
               </button>
               <button onClick={() => answerTier('skilled')}
-                className="flex flex-col gap-2 rounded-xl border-2 border-clay-400/30 bg-clay-400/8 p-4 text-left transition-all hover:border-clay-500/60 hover:bg-clay-400/15 active:scale-[0.97]">
-                <span className="font-semibold text-clay-800">{current.skilledLabel}</span>
-                <span className="text-xs leading-relaxed text-clay-700/80">{current.skilledExample}</span>
+                className="flex flex-col gap-2 rounded-xl border border-ink-900/15 bg-white p-4 text-left transition-colors hover:border-forest-600/50 hover:bg-forest-600/5 active:scale-[0.98]">
+                <span className="text-sm font-medium text-ink-900">{current.skilledLabel}</span>
+                <span className="text-xs leading-relaxed text-ink-700/70">{current.skilledExample}</span>
               </button>
             </div>
           </>
@@ -893,20 +891,17 @@ function TaskScreening({
 
       {/* Running summary of previous answers */}
       {stepIdx > 0 && (
-        <div className="mt-3 space-y-1">
+        <div className="mt-3 divide-y divide-ink-900/8 overflow-hidden rounded-xl ring-1 ring-ink-900/8">
           {steps.slice(0, stepIdx).map((s, i) => {
             let label = ''
             if (s.type === 'risk') label = screening.flags[s.key] ? 'Yes' : 'No'
             else if (s.type === 'tools-needed') label = screening.toolsNeeded ? 'Yes' : 'No'
             else if (s.type === 'tool-provider') label = screening.toolProvider === 'employer' ? 'You provide' : 'Worker brings (+15%)'
             else if (s.type === 'tier') label = screening.tier === 'basic' ? 'Basic' : 'Technical'
-            const isYes = label === 'Yes' || label.includes('+15%') || label === 'Technical'
             return (
-              <div key={i} className="flex items-center justify-between rounded-lg bg-cream-50 px-3.5 py-2 ring-1 ring-ink-900/8">
+              <div key={i} className="flex items-center justify-between gap-3 bg-cream-50 px-3.5 py-2.5">
                 <span className="text-xs text-ink-700">{s.question}</span>
-                <span className={`ml-3 shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${isYes ? 'bg-clay-400/15 text-clay-700' : 'bg-forest-600/10 text-forest-700'}`}>
-                  {label}
-                </span>
+                <span className="shrink-0 text-xs font-medium text-ink-900">{label}</span>
               </div>
             )
           })}
@@ -1083,16 +1078,18 @@ function DispatchModal({ worker, category, screening, dispatchQueue, onClose, on
   const [method, setMethod] = useState('')
   const [busy, setBusy] = useState(false)
   const cat = allCategories.find((c) => c.title === taskType)
-  // Pre-fill tier and tool answers from screening if provided
+  // Pre-fill tier from screening if provided
   const [tier, setTier] = useState<'basic' | 'skilled'>(screening?.tier ?? 'basic')
-  const [workerProvidesTools, setWorkerProvidesTools] = useState(screening?.toolProvider === 'worker')
-  useEffect(() => { setTier(screening?.tier ?? 'basic'); setWorkerProvidesTools(screening?.toolProvider === 'worker') }, [screening])
+  useEffect(() => { setTier(screening?.tier ?? 'basic') }, [screening])
+  // Whether this task's rate gets the tools surcharge is decided by the
+  // worker's own profile — not asked again here.
+  const workerProvidesTools = Boolean(worker.hasTools)
   // Logistics: distance + vehicle
   const [distanceKm, setDistanceKm] = useState(3)
   const [vehicle, setVehicle] = useState(0)   // surcharge value from VEHICLE_SURCHARGES
 
-  // Reset tier/tool when category changes
-  useEffect(() => { setTier('basic'); setWorkerProvidesTools(false) }, [taskType])
+  // Reset tier when category changes
+  useEffect(() => { setTier('basic') }, [taskType])
 
   // ---------- Rate calculation ----------
   const baseRate = (() => {
@@ -1219,16 +1216,21 @@ function DispatchModal({ worker, category, screening, dispatchQueue, onClose, on
             </div>
           )}
 
-          {/* Tool modifier */}
+          {/* Tool modifier — determined automatically from the worker's profile */}
           {cat?.toolModifier && (
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-ink-900/10 bg-cream-100 p-3.5">
-              <input type="checkbox" checked={workerProvidesTools} onChange={(e) => setWorkerProvidesTools(e.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 rounded border-ink-900/30 text-forest-600 focus:ring-forest-600/30" />
+            <div className="flex items-start gap-3 rounded-xl border border-ink-900/10 bg-cream-100 p-3.5">
+              <Wrench size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-ink-700" />
               <span>
-                <span className="block text-sm font-medium text-ink-900">Worker provides their own tools</span>
-                <span className="block text-xs text-ink-700/80">+15% surcharge on the base rate ({cedis(Math.round((((tier === 'skilled' && cat.skilledRate) ? cat.skilledRate : cat.rate)) * TOOL_SURCHARGE_RATE))} extra)</span>
+                <span className="block text-sm font-medium text-ink-900">
+                  {workerProvidesTools ? `${wName(worker).split(' ')[0]} brings their own tools` : `${wName(worker).split(' ')[0]} does not have their own tools`}
+                </span>
+                <span className="block text-xs text-ink-700/80">
+                  {workerProvidesTools
+                    ? `15% tool surcharge applied automatically (+${cedis(Math.round((((tier === 'skilled' && cat.skilledRate) ? cat.skilledRate : cat.rate)) * TOOL_SURCHARGE_RATE))})`
+                    : 'Standard rate — please provide the tools for this task.'}
+                </span>
               </span>
-            </label>
+            </div>
           )}
 
           {/* Agriculture minimum-day notice */}
