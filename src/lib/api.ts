@@ -240,6 +240,8 @@ export const tasks = {
     request<unknown>(`/api/tasks/${id}/decline-offer`, { method: 'PATCH', token }),
   accept: (id: string | number, token = session.workerToken()) =>
     request<unknown>(`/api/tasks/${id}/accept`, { method: 'PATCH', token }),
+  updateLocation: (id: string | number, lat: number, lng: number, token = session.workerToken()) =>
+    request<unknown>(`/api/tasks/${id}/location`, { method: 'PATCH', body: { lat, lng }, token }),
   workerDone: (id: string | number, token = session.workerToken()) =>
     request<unknown>(`/api/tasks/${id}/worker-done`, { method: 'PATCH', token }),
 
@@ -258,18 +260,19 @@ export const tasks = {
   // Dispatch a specific worker: a task carrying the payment reference,
   // matching the exact shape beyondxco.com posts.
   dispatch: (
-    args: { worker: Worker; taskType: string; location: string; duration: string; pay: number; paymentRef: string },
+    args: { worker: Worker; taskType: string; jobDescription: string; location: string; duration: string; pay: number; paymentRef: string },
     token = session.employerToken(),
   ) => request<{ task?: Task }>('/api/tasks', {
     method: 'POST',
     token,
     body: {
       taskType: args.taskType,
-      description: `Worker: ${args.worker.name || args.worker.fullName} (${args.worker.workerId}) | Payment Ref: ${args.paymentRef}`,
+      description: args.jobDescription,
       location: args.location || 'To be confirmed',
       duration: args.duration,
       pay: args.pay,
       workerId: args.worker.id,
+      paymentRef: args.paymentRef,
       status: 'payment_pending',
     },
   }),
