@@ -297,14 +297,14 @@ export default function EmployerDashboard() {
                   Choose the type of work and we&rsquo;ll show you the workers certified for it.
                 </p>
 
-                <div className="mt-4 inline-flex rounded-full bg-ink-900/5 p-1" role="tablist" aria-label="Work location">
+                <div className="mt-4 flex items-center gap-5 border-b border-ink-900/10" role="tablist" aria-label="Work location">
                   {([['field', 'On the field'], ['remote', 'Remote']] as const).map(([id, label]) => (
                     <button
                       key={id}
                       role="tab"
                       aria-selected={workMode === id}
                       onClick={() => setWorkMode(id)}
-                      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${workMode === id ? 'bg-cream-50 text-ink-900 shadow-sm' : 'text-ink-700 hover:text-ink-900'}`}
+                      className={`border-b-2 pb-2.5 text-sm font-medium transition-colors ${workMode === id ? 'border-forest-600 text-forest-700' : 'border-transparent text-ink-700 hover:text-ink-900'}`}
                     >
                       {label}
                     </button>
@@ -525,49 +525,53 @@ export default function EmployerDashboard() {
         {tab === 'post' && <PostTask onDone={(msg) => { setToast({ id: Date.now(), kind: 'success', title: 'Task posted', detail: msg }); load() }} />}
 
         {tab === 'history' && (
-          <div className="mt-6 space-y-3">
-            {loading ? <Skeleton /> : taskList.length ? taskList.map((t) => {
-              const s = st(t.status)
-              const worker = typeof t.employer === 'string' ? t.employer : ''
-              const rev = t.reviews?.[0]?.rating
-              return (
-                <div key={String(t.id)} className="rounded-xl bg-cream-50 p-4 shadow-sm ring-1 ring-ink-900/5 sm:p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <p className="font-serif text-base font-medium text-ink-900">{t.taskType || 'Task'}</p>
-                      <p className="mt-0.5 truncate text-sm text-ink-700">{t.description || worker}{t.location ? ` · ${t.location}` : ''}</p>
-                      {rev ? <div className="mt-1 flex items-center gap-2 text-xs text-ink-700">You rated <Stars n={Number(rev)} /></div> : null}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3">
-                      <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${s.chip}`}>
-                        <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${s.dot}`} /> {s.label}
-                      </span>
-                      {t.status === 'pending_confirmation' && (
-                        <button onClick={() => setRating(t)} className="shrink-0 rounded-full bg-forest-600 px-4 py-2 text-xs font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
-                          Confirm work &amp; rate
-                        </button>
+          <div className="mt-6">
+            {loading ? <Skeleton /> : taskList.length ? (
+              <div className="divide-y divide-ink-900/8 rounded-lg ring-1 ring-ink-900/8">
+                {taskList.map((t) => {
+                  const s = st(t.status)
+                  const worker = typeof t.employer === 'string' ? t.employer : ''
+                  const rev = t.reviews?.[0]?.rating
+                  return (
+                    <div key={String(t.id)} className="p-4 sm:p-5">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="font-serif text-base font-medium text-ink-900">{t.taskType || 'Task'}</p>
+                          <p className="mt-0.5 truncate text-sm text-ink-700">{t.description || worker}{t.location ? ` · ${t.location}` : ''}</p>
+                          {rev ? <div className="mt-1 flex items-center gap-2 text-xs text-ink-700">You rated <Stars n={Number(rev)} /></div> : null}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-4">
+                          <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-ink-700">
+                            <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${s.dot}`} /> {s.label}
+                          </span>
+                          {t.status === 'pending_confirmation' && (
+                            <button onClick={() => setRating(t)} className="shrink-0 rounded-md bg-forest-600 px-3.5 py-2 text-xs font-semibold text-cream-50 transition-colors hover:bg-forest-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
+                              Confirm work &amp; rate
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {t.status === 'accepted' && <LiveLocation taskId={t.id} />}
+                      {s.note && <p className="mt-3 flex items-start gap-2 border-t border-ink-900/10 pt-3 text-xs leading-relaxed text-ink-700"><Info size={13} aria-hidden="true" className="mt-0.5 shrink-0 text-clay-500" /> {s.note}</p>}
+                      {t.status === 'declined' && (
+                        <div className="mt-3 flex flex-wrap gap-2 border-t border-ink-900/10 pt-3">
+                          <button
+                            onClick={() => onDeclinedChoice(t, 'replace')}
+                            className="rounded-md bg-forest-600 px-3.5 py-2 text-xs font-semibold text-cream-50 transition-colors hover:bg-forest-500">
+                            Request a replacement worker
+                          </button>
+                          <button
+                            onClick={() => onDeclinedChoice(t, 'refund')}
+                            className="rounded-md border border-ink-900/15 px-3.5 py-2 text-xs font-medium text-ink-700 transition-colors hover:bg-ink-900/5">
+                            Request a refund
+                          </button>
+                        </div>
                       )}
                     </div>
-                  </div>
-                  {t.status === 'accepted' && <LiveLocation taskId={t.id} />}
-                  {s.note && <p className="mt-3 flex items-start gap-2 border-t border-ink-900/10 pt-3 text-xs leading-relaxed text-ink-700"><Info size={13} aria-hidden="true" className="mt-0.5 shrink-0 text-clay-500" /> {s.note}</p>}
-                  {t.status === 'declined' && (
-                    <div className="mt-3 flex flex-wrap gap-2 border-t border-ink-900/10 pt-3">
-                      <button
-                        onClick={() => onDeclinedChoice(t, 'replace')}
-                        className="rounded-full bg-forest-600 px-4 py-2 text-xs font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98]">
-                        Request a replacement worker
-                      </button>
-                      <button
-                        onClick={() => onDeclinedChoice(t, 'refund')}
-                        className="rounded-full border border-ink-900/15 px-4 py-2 text-xs font-medium text-ink-700 transition-colors hover:bg-ink-900/5">
-                        Request a refund
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )
-            }) : <Empty text="No dispatches yet. Hire a worker to get started." />}
+                  )
+                })}
+              </div>
+            ) : <Empty text="No dispatches yet. Hire a worker to get started." />}
           </div>
         )}
       </main>
