@@ -52,7 +52,7 @@ export type Worker = {
 // Task lifecycle on the backend:
 //   open -> offered -> accepted -> pending_confirmation -> employer_confirmed / completed
 export type TaskStatus =
-  | 'open' | 'offered' | 'accepted'
+  | 'open' | 'offered' | 'accepted' | 'declined'
   | 'pending_confirmation' | 'employer_confirmed' | 'completed'
 
 export type Task = {
@@ -63,8 +63,9 @@ export type Task = {
   duration?: string
   pay?: number | string
   status?: TaskStatus
-  employer?: string | { orgName?: string; name?: string }
-  acceptedBy?: string | number
+  employer?: string | { orgName?: string; name?: string; contactPerson?: string; phone?: string; email?: string }
+  acceptedBy?: string | number | { fullName?: string; workerId?: string; phone?: string }
+  paymentRef?: string
   createdAt?: string
   reviews?: { rating?: number; comment?: string }[]
   [k: string]: unknown
@@ -255,21 +256,24 @@ export const tasks = {
     token = session.employerToken(),
   ) => request<{ task?: Task }>('/api/tasks', { method: 'POST', body: payload, token }),
 
-  // Dispatch a specific worker: a task carrying the payment reference,
-  // matching the exact shape beyondxco.com posts.
+  // Dispatch a specific worker. The job description the employer writes goes
+  // to the worker as-is — the payment reference is sent as its own field
+  // (paymentRef) so it's stored for BeyondX/admin review only and never
+  // shown to the worker.
   dispatch: (
-    args: { worker: Worker; taskType: string; location: string; duration: string; pay: number; paymentRef: string },
+    args: { worker: Worker; taskType: string; description?: string; location: string; duration: string; pay: number; paymentRef: string },
     token = session.employerToken(),
   ) => request<{ task?: Task }>('/api/tasks', {
     method: 'POST',
     token,
     body: {
       taskType: args.taskType,
-      description: `Worker: ${args.worker.name || args.worker.fullName} (${args.worker.workerId}) | Payment Ref: ${args.paymentRef}`,
+      description: args.description?.trim() || args.taskType,
       location: args.location || 'To be confirmed',
       duration: args.duration,
       pay: args.pay,
       workerId: args.worker.id,
+      paymentRef: args.paymentRef,
     },
   }),
 

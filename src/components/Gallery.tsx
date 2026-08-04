@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { Image } from 'lucide-react'
 import { useReveal } from '../hooks/useReveal'
 
 export default function Gallery() {
@@ -16,7 +17,7 @@ export default function Gallery() {
             Gallery
           </span>
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-forest-600/10">
-            <img src="/icons/gallery.png" alt="" className="h-9 w-9 object-contain" />
+            <Image size={30} aria-hidden="true" className="text-forest-600" />
           </div>
           <h2 className="font-serif text-3xl font-medium leading-tight text-ink-900 text-balance sm:text-4xl lg:text-5xl">
             Coming{' '}

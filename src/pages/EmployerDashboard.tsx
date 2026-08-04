@@ -73,6 +73,7 @@ const STATUS: Record<string, { label: string; dot: string; chip: string; note?: 
   pending_confirmation: { label: 'Worker marked done', dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-700', note: 'Confirm the work to release payment through BeyondX.' },
   employer_confirmed: { label: 'Confirmed — with BeyondX', dot: 'bg-ink-700', chip: 'bg-ink-900/10 text-ink-800', note: 'BeyondX is processing the payment release to the worker.' },
   completed: { label: 'Payment released', dot: 'bg-forest-600', chip: 'bg-forest-600/15 text-forest-800', note: 'BeyondX released the payment to the worker.' },
+  declined: { label: 'Worker declined', dot: 'bg-red-400', chip: 'bg-red-100 text-red-800', note: "The worker declined this offer. Let BeyondX know below whether you'd like a replacement worker or a refund." },
 }
 const st = (s?: string) => STATUS[s || 'open'] || STATUS.open
 
@@ -82,8 +83,18 @@ const PAYMENT_METHODS = [
   { id: 'AirtelTigo Money', logo: '/payment/airteltigo-money.png', alt: 'AirtelTigo Money' },
 ]
 
-// Dispatch writes "Worker: <name> (<id>) | Payment Ref: <ref>" into the description.
+// Payment ref and worker identity now come back as real fields on the task
+// (t.paymentRef, t.acceptedBy). Older dispatched tasks had this info baked
+// into the description string instead — fall back to parsing that for them.
 function dispatchDetails(t: Task) {
+  const acceptedBy = typeof t.acceptedBy === 'object' && t.acceptedBy ? t.acceptedBy : undefined
+  if (t.paymentRef || acceptedBy) {
+    return {
+      workerName: acceptedBy?.fullName || '',
+      workerId: acceptedBy?.workerId || '',
+      paymentRef: (t.paymentRef as string) || '',
+    }
+  }
   const d = String(t.description || '')
   const worker = d.match(/Worker:\s*([^(|]+?)\s*\(([^)]+)\)/)
   const ref = d.match(/Payment Ref:\s*([^|]+)/)
@@ -210,6 +221,36 @@ export default function EmployerDashboard() {
     setAnnounce(`Work confirmed for ${worker}.`)
     setToast({ id: Date.now(), kind: 'success', title: 'Work confirmed', detail: `BeyondX is now processing payment to ${worker}. It shows "Payment released" once done.` })
     load()
+  }
+
+  // A declined offer needs the employer to pick a next step. This just
+  // notifies BeyondX with the choice — the team follows up to action it.
+  const onDeclinedChoice = (t: Task, choice: 'replace' | 'refund') => {
+    const emp = session.employer()
+    contact
+      .send({
+        name: orgName,
+        email: (emp?.email as string) || undefined,
+        phone: (emp?.phone as string) || undefined,
+        message:
+          `${orgName} responded to a declined offer.\n\n` +
+          `Task: ${t.taskType || '—'}\n` +
+          `Location: ${t.location || '—'}\n` +
+          `Amount: GHS ${Number(t.pay || 0).toFixed(2)}\n\n` +
+          `The employer would like: ${choice === 'replace' ? 'a replacement worker dispatched' : 'a refund'}.`,
+        category: 'task_declined_employer_choice',
+      })
+      .then(() => {
+        setToast({
+          id: Date.now(),
+          kind: 'success',
+          title: choice === 'replace' ? 'Replacement requested' : 'Refund requested',
+          detail: 'BeyondX will follow up shortly.',
+        })
+      })
+      .catch(() => {
+        setToast({ id: Date.now(), kind: 'info', title: 'Could not send request', detail: 'Please try again or use Support.' })
+      })
   }
 
   return (
@@ -510,6 +551,20 @@ export default function EmployerDashboard() {
                   </div>
                   {t.status === 'accepted' && <LiveLocation taskId={t.id} />}
                   {s.note && <p className="mt-3 flex items-start gap-2 border-t border-ink-900/10 pt-3 text-xs leading-relaxed text-ink-700"><Info size={13} aria-hidden="true" className="mt-0.5 shrink-0 text-clay-500" /> {s.note}</p>}
+                  {t.status === 'declined' && (
+                    <div className="mt-3 flex flex-wrap gap-2 border-t border-ink-900/10 pt-3">
+                      <button
+                        onClick={() => onDeclinedChoice(t, 'replace')}
+                        className="rounded-full bg-forest-600 px-4 py-2 text-xs font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98]">
+                        Request a replacement worker
+                      </button>
+                      <button
+                        onClick={() => onDeclinedChoice(t, 'refund')}
+                        className="rounded-full border border-ink-900/15 px-4 py-2 text-xs font-medium text-ink-700 transition-colors hover:bg-ink-900/5">
+                        Request a refund
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             }) : <Empty text="No dispatches yet. Hire a worker to get started." />}
@@ -1022,6 +1077,7 @@ function DispatchModal({ worker, category, screening, dispatchQueue, onClose, on
   useEsc(onClose)
   const [days, setDays] = useState(1)
   const [location, setLocation] = useState('')
+  const [description, setDescription] = useState('')
   const [taskType, setTaskType] = useState(category || wSkills(worker)[0] || 'General Task')
   const [payRef, setPayRef] = useState('')
   const [method, setMethod] = useState('')
@@ -1064,6 +1120,7 @@ function DispatchModal({ worker, category, screening, dispatchQueue, onClose, on
       await tasksApi.dispatch({
         worker,
         taskType,
+        description,
         location: cat?.mode === 'remote' ? 'Remote' : location,
         duration,
         pay: workerGets,
@@ -1093,7 +1150,7 @@ function DispatchModal({ worker, category, screening, dispatchQueue, onClose, on
         <p className="mb-4 text-sm text-ink-700">
           Send your payment via mobile money first, then enter the reference number below.
           <span className="mt-1.5 block rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
-            BeyondX will verify your payment before the worker is notified. This usually takes a few hours on business days.
+            BeyondX will verify your payment before the worker is notified. This usually takes just a few minutes during business hours.
           </span>
         </p>
 
@@ -1104,6 +1161,14 @@ function DispatchModal({ worker, category, screening, dispatchQueue, onClose, on
             <select value={taskType} onChange={(e) => setTaskType(e.target.value)} className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30">
               {allCategories.map((c) => <option key={c.title}>{c.title}</option>)}
             </select>
+          </label>
+
+          {/* Job description — shown to the worker */}
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-ink-700">Job description <span className="font-normal text-ink-700/60">(shown to the worker)</span></span>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
+              placeholder="What needs doing, any specifics the worker should know"
+              className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
           </label>
 
           {/* Complexity tier */}

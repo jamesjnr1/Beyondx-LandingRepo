@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
-import { MapPin, Calendar, Check, X, Star, RotateCcw, Info, RefreshCw, AlertCircle, Wrench, Award, Briefcase, Camera, Plus, Trash2 } from 'lucide-react'
+import { MapPin, Calendar, Check, X, Star, RotateCcw, Info, RefreshCw, AlertCircle, Wrench, Award, Briefcase, Camera, Plus, Trash2, Phone, ClipboardList, Wallet } from 'lucide-react'
 import DashboardHeader from './DashboardHeader'
 import ReferralCard from '../components/ReferralCard'
 import ProfileModal, { type Profile } from '../components/ProfileModal'
@@ -106,9 +106,11 @@ function FileUploadButton({
 function WorkExperienceCard({
   worker,
   onSaved,
+  onError,
 }: {
   worker: Worker | null
   onSaved: (patch: Record<string, unknown>) => void
+  onError: (msg: string) => void
 }) {
   const workerId = (worker?.workerId as string) || 'worker'
   const [expEntries, setExpEntries] = useState<ExperienceEntry[]>(() =>
@@ -153,7 +155,9 @@ function WorkExperienceCard({
       onSaved(patch)
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
-    } catch { /* parent handles errors */ }
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : 'Could not save — please try again.')
+    }
     finally { setSaving(false) }
   }
 
@@ -323,7 +327,7 @@ function WorkExperienceCard({
 // ---------------------------------------------------------------------------
 const TOOL_RELEVANT = ['Agriculture & Environment', 'Construction, Maintenance & Repairs', 'Facility & Cleaning']
 
-function ToolsStatusCard({ worker, onSaved }: { worker: Worker | null; onSaved: (patch: Record<string, unknown>) => void }) {
+function ToolsStatusCard({ worker, onSaved, onError }: { worker: Worker | null; onSaved: (patch: Record<string, unknown>) => void; onError: (msg: string) => void }) {
   const mySkills = (Array.isArray(worker?.skills) ? worker!.skills as string[] : [])
     .filter((s) => TOOL_RELEVANT.includes(s))
 
@@ -344,7 +348,9 @@ function ToolsStatusCard({ worker, onSaved }: { worker: Worker | null; onSaved: 
       onSaved(patch)
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
-    } catch { /* toast is handled by parent if needed */ }
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : 'Could not save — please try again.')
+    }
     finally { setSaving(false) }
   }
 
@@ -412,6 +418,19 @@ const cedis = (n?: number | string) => `GH\u20b5 ${Number(n || 0).toLocaleString
 const employerName = (t: Task) =>
   typeof t.employer === 'string' ? t.employer : t.employer?.orgName || t.employer?.name || 'BeyondX employer'
 
+const employerContact = (t: Task) => (typeof t.employer === 'object' ? t.employer?.phone : undefined)
+
+// Older dispatched tasks had "Worker: <name> (<id>) | Payment Ref: <ref>"
+// baked into the description instead of the real job description — never
+// show that string to the worker. Newer tasks already carry a clean
+// description and their own paymentRef field, so this only matters for
+// tasks created before that was fixed.
+const LEGACY_DISPATCH_META = /^Worker:\s*[^(|]+\([^)]+\)\s*\|\s*Payment Ref:/i
+const publicDescription = (t: Task) => {
+  const raw = String(t.description || '').trim()
+  return LEGACY_DISPATCH_META.test(raw) ? '' : raw
+}
+
 function Stars({ n }: { n: number }) {
   return (
     <span className="inline-flex" role="img" aria-label={`${n} out of 5 stars`}>
@@ -452,20 +471,58 @@ function Empty({ text }: { text: string }) {
   return <div className="rounded-xl border border-dashed border-ink-900/15 p-10 text-center text-sm text-ink-700">{text}</div>
 }
 
+function ConfirmDialog({
+  title, message, confirmLabel, busy, onConfirm, onCancel,
+}: {
+  title: string
+  message: string
+  confirmLabel: string
+  busy: boolean
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/50 p-4" onClick={onCancel}>
+      <div role="dialog" aria-modal="true" aria-labelledby="confirm-title" className="w-full max-w-sm rounded-2xl bg-cream-50 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <h2 id="confirm-title" className="font-serif text-lg font-medium text-ink-900">{title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-700">{message}</p>
+        <div className="mt-5 flex gap-2">
+          <button onClick={onCancel} disabled={busy}
+            className="flex-1 rounded-full border border-ink-900/15 px-4 py-2.5 text-sm font-medium text-ink-700 transition-colors hover:bg-ink-900/5 disabled:opacity-60">
+            Cancel
+          </button>
+          <button onClick={onConfirm} disabled={busy}
+            className="flex-1 rounded-full bg-red-600 px-4 py-2.5 text-sm font-semibold text-cream-50 transition-all hover:bg-red-700 active:scale-[0.98] disabled:opacity-60">
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function TaskCard({ task, children }: { task: Task; children?: ReactNode }) {
+  const desc = publicDescription(task)
+  const phone = employerContact(task)
   return (
     <div className="flex flex-col gap-4 rounded-xl bg-cream-50 p-4 shadow-sm ring-1 ring-ink-900/5 sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <div className="min-w-0">
         <span className="mb-1 inline-block rounded-full bg-forest-600/10 px-2.5 py-0.5 text-xs font-medium text-forest-700">
           {task.taskType || 'Task'}
         </span>
-        <h3 className="font-serif text-lg font-medium text-ink-900">{task.description || task.taskType || 'Task'}</h3>
+        <h3 className="font-serif text-lg font-medium text-ink-900">{task.taskType || 'Task'}</h3>
+        {desc && <p className="mt-1 text-sm leading-relaxed text-ink-700">{desc}</p>}
         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-700">
           {task.location && <span className="inline-flex items-center gap-1"><MapPin size={14} aria-hidden="true" /> {task.location}</span>}
           {task.duration && <span className="inline-flex items-center gap-1"><Calendar size={14} aria-hidden="true" /> {task.duration}</span>}
           <span className="font-semibold text-ink-900">{cedis(task.pay)}</span>
         </div>
-        <p className="mt-1 text-xs text-ink-700">Employer · <span className="font-medium text-ink-900">{employerName(task)}</span></p>
+        <p className="mt-1 text-xs text-ink-700">
+          Employer · <span className="font-medium text-ink-900">{employerName(task)}</span>
+          {phone && (
+            <> · <a href={`tel:${phone}`} className="inline-flex items-center gap-1 font-medium text-forest-700 hover:underline"><Phone size={11} aria-hidden="true" /> {phone}</a></>
+          )}
+        </p>
       </div>
       {children && <div className="flex shrink-0 gap-2">{children}</div>}
     </div>
@@ -486,6 +543,7 @@ export default function WorkerDashboard() {
   const [editing, setEditing] = useState(false)
   const [announce, setAnnounce] = useState('')
   const [toast, setToast] = useState<ToastMsg>(null)
+  const [confirmingDecline, setConfirmingDecline] = useState<Task | null>(null)
 
   const load = useCallback(async () => {
     setError(null)
@@ -560,16 +618,33 @@ export default function WorkerDashboard() {
     try {
       await tasksApi.declineOffer(t.id)
       setDeclined((d) => [t, ...d])
-      setToast({ id: Date.now(), kind: 'info', title: 'Offer declined', detail: 'It has moved to your Declined tab for this session.' })
+      // Let the employer know right away, and give them a clear choice.
+      contact
+        .send({
+          name: employerName(t),
+          message:
+            `${displayName} has declined the offer for "${t.taskType || 'a task'}"` +
+            `${t.location ? ` in ${t.location}` : ''}.\n\n` +
+            `Would you like BeyondX to dispatch a replacement worker, or process a refund? ` +
+            `Reply to let us know which you'd prefer.`,
+          category: 'task_declined',
+        })
+        .catch(() => null)
+      setToast({ id: Date.now(), kind: 'info', title: 'Offer declined', detail: 'The employer has been notified and asked whether they want a replacement worker or a refund.' })
       await load()
     } catch (e) {
       setToast({ id: Date.now(), kind: 'info', title: 'That did not go through', detail: e instanceof ApiError ? e.message : 'Please try again.' })
     } finally {
       setBusyId(null)
+      setConfirmingDecline(null)
     }
   }
 
-  const available = [...offers, ...open]
+  // Once declined this session, never let it show back up as acceptable —
+  // even if a background refresh still includes it before the backend
+  // catches up.
+  const declinedIds = new Set(declined.map((t) => String(t.id)))
+  const available = [...offers, ...open].filter((t) => !declinedIds.has(String(t.id)))
   const displayName = (me?.fullName as string) || (me?.name as string) || 'Worker'
   const photo = (me?.photoUrl as string) || undefined
   const completed = history.length
@@ -610,16 +685,24 @@ export default function WorkerDashboard() {
         )}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Stat icon={<Star size={20} />} label="Your rating" value={me?.rating && Number(me.rating) > 0 ? `${Number(me.rating).toFixed(1)}` : '—'} />
-          <Stat icon={<img src="/icons/tasks.png" alt="" className="h-5 w-5 object-contain" />} label="Tasks completed" value={`${completed}`} />
-          <Stat icon={<img src="/icons/wallet.png" alt="" className="h-5 w-5 object-contain" />} label="Total earned" value={cedis(earned)} />
+          <Stat icon={<Star size={20} aria-hidden="true" />} label="Your rating" value={me?.rating && Number(me.rating) > 0 ? `${Number(me.rating).toFixed(1)}` : '—'} />
+          <Stat icon={<ClipboardList size={20} aria-hidden="true" />} label="Tasks completed" value={`${completed}`} />
+          <Stat icon={<Wallet size={20} aria-hidden="true" />} label="Total earned" value={cedis(earned)} />
         </div>
 
         <ReferralCard code={(me?.workerId as string) || 'BX-—'} referrals={0} />
 
-        <ToolsStatusCard worker={me} onSaved={(patch) => { session.patchWorker(patch); setMe((m) => ({ ...(m || {}), ...patch })) }} />
+        <ToolsStatusCard
+          worker={me}
+          onSaved={(patch) => { session.patchWorker(patch); setMe((m) => ({ ...(m || {}), ...patch })) }}
+          onError={(msg) => setToast({ id: Date.now(), kind: 'info', title: 'Could not save', detail: msg })}
+        />
 
-        <WorkExperienceCard worker={me} onSaved={(patch) => { session.patchWorker(patch); setMe((m) => ({ ...(m || {}), ...patch })) }} />
+        <WorkExperienceCard
+          worker={me}
+          onSaved={(patch) => { session.patchWorker(patch); setMe((m) => ({ ...(m || {}), ...patch })) }}
+          onError={(msg) => setToast({ id: Date.now(), kind: 'info', title: 'Could not save', detail: msg })}
+        />
 
         <div className="mt-8 flex items-center gap-2 overflow-x-auto border-b border-ink-900/10 pb-px" role="tablist" aria-label="Worker sections">
           {tabs.map((t) => (
@@ -652,7 +735,7 @@ export default function WorkerDashboard() {
                     <Check size={16} aria-hidden="true" /> {busyId === t.id ? 'Working…' : 'Accept'}
                   </button>
                   {t.status === 'offered' && (
-                    <button onClick={() => declineOffer(t)} disabled={busyId === t.id} aria-label={`Decline ${t.taskType || 'task'}`}
+                    <button onClick={() => setConfirmingDecline(t)} disabled={busyId === t.id} aria-label={`Decline ${t.taskType || 'task'}`}
                       className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-ink-900/15 px-4 py-2 text-sm font-medium text-ink-700 transition-colors hover:bg-ink-900/5 disabled:opacity-60 sm:flex-none">
                       <X size={16} aria-hidden="true" /> Decline
                     </button>
@@ -730,6 +813,17 @@ export default function WorkerDashboard() {
       </main>
 
       <Toast toast={toast} onClose={() => setToast(null)} />
+
+      {confirmingDecline && (
+        <ConfirmDialog
+          title="Decline this offer?"
+          message={`Are you sure you want to decline "${confirmingDecline.taskType || 'this task'}"? Once declined, it moves to your Declined tab and you won't be able to accept it again.`}
+          confirmLabel={busyId === confirmingDecline.id ? 'Declining…' : 'Yes, decline'}
+          busy={busyId === confirmingDecline.id}
+          onCancel={() => setConfirmingDecline(null)}
+          onConfirm={() => declineOffer(confirmingDecline)}
+        />
+      )}
 
       {editing && (
         <ProfileModal
