@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, Star, Send, Phone, Plus, X, ShieldCheck, ShieldAlert, CircleCheck, Info, RefreshCw, AlertCircle, Copy, Check, Award, Wrench } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Star, Send, Phone, Plus, X, ShieldCheck, CircleCheck, Info, RefreshCw, AlertCircle, Copy, Check, Award } from 'lucide-react'
 import DashboardHeader from './DashboardHeader'
 import ProfileModal from '../components/ProfileModal'
 import Toast, { type ToastMsg } from '../components/Toast'
@@ -65,15 +65,15 @@ function sortWorkersForTask(workers: Worker[], flags: TaskFlags): Worker[] {
   return [...flagged, ...other]
 }
 
-const STATUS: Record<string, { label: string; dot: string; chip: string; note?: string }> = {
-  payment_pending: { label: 'Awaiting payment verification', dot: 'bg-amber-400', chip: 'bg-amber-100 text-amber-800', note: 'BeyondX is verifying your payment reference. The worker will be notified once confirmed.' },
-  open: { label: 'Awaiting worker', dot: 'bg-clay-500', chip: 'bg-clay-400/15 text-clay-600', note: 'Waiting for a worker to accept.' },
-  offered: { label: 'Awaiting worker response', dot: 'bg-clay-500', chip: 'bg-clay-400/15 text-clay-600', note: 'The worker will accept or decline shortly.' },
-  accepted: { label: 'On the job', dot: 'bg-forest-500', chip: 'bg-forest-600/10 text-forest-700', note: 'Attendance is GPS-verified. Confirm once the work is finished.' },
-  pending_confirmation: { label: 'Worker marked done', dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-700', note: 'Confirm the work to release payment through BeyondX.' },
-  employer_confirmed: { label: 'Confirmed — with BeyondX', dot: 'bg-ink-700', chip: 'bg-ink-900/10 text-ink-800', note: 'BeyondX is processing the payment release to the worker.' },
-  completed: { label: 'Payment released', dot: 'bg-forest-600', chip: 'bg-forest-600/15 text-forest-800', note: 'BeyondX released the payment to the worker.' },
-  declined: { label: 'Worker declined', dot: 'bg-red-400', chip: 'bg-red-100 text-red-800', note: "The worker declined this offer. Let BeyondX know below whether you'd like a replacement worker or a refund." },
+const STATUS: Record<string, { label: string; color: string; bar: string; note?: string; urgent?: boolean }> = {
+  payment_pending:    { label: 'Verifying payment',   color: 'text-amber-700',   bar: 'bg-amber-400',  note: 'We received your payment details and are confirming the transaction. The worker will be notified once verified — usually within a few minutes.' },
+  offered:            { label: 'Worker notified',     color: 'text-ink-700',     bar: 'bg-ink-400',    note: 'The worker has been sent a job offer via SMS and is reviewing the details.' },
+  open:               { label: 'Finding a worker',    color: 'text-ink-500',     bar: 'bg-ink-300',    note: 'We are matching a worker to this job.' },
+  accepted:           { label: 'On the job',          color: 'text-forest-700',  bar: 'bg-forest-500', note: 'Work is underway. You will be notified when the worker marks it complete.' },
+  pending_confirmation: { label: 'Action required',  color: 'text-amber-700',   bar: 'bg-amber-500',  note: 'The worker has marked the job as done. Confirm below to release their payment.', urgent: true },
+  employer_confirmed: { label: 'Payment processing', color: 'text-ink-600',     bar: 'bg-ink-400',    note: 'BeyondX is releasing the payment. This usually completes within a few hours.' },
+  completed:          { label: 'Complete',            color: 'text-forest-700',  bar: 'bg-forest-600', note: 'Payment has been released to the worker.' },
+  payment_rejected:   { label: 'Payment not verified', color: 'text-red-600',   bar: 'bg-red-400',    note: 'We could not verify this payment. Please contact BeyondX to resolve.' },
 }
 const st = (s?: string) => STATUS[s || 'open'] || STATUS.open
 
@@ -83,18 +83,8 @@ const PAYMENT_METHODS = [
   { id: 'AirtelTigo Money', logo: '/payment/airteltigo-money.png', alt: 'AirtelTigo Money' },
 ]
 
-// Payment ref and worker identity now come back as real fields on the task
-// (t.paymentRef, t.acceptedBy). Older dispatched tasks had this info baked
-// into the description string instead — fall back to parsing that for them.
+// Dispatch writes "Worker: <name> (<id>) | Payment Ref: <ref>" into the description.
 function dispatchDetails(t: Task) {
-  const acceptedBy = typeof t.acceptedBy === 'object' && t.acceptedBy ? t.acceptedBy : undefined
-  if (t.paymentRef || acceptedBy) {
-    return {
-      workerName: acceptedBy?.fullName || '',
-      workerId: acceptedBy?.workerId || '',
-      paymentRef: (t.paymentRef as string) || '',
-    }
-  }
   const d = String(t.description || '')
   const worker = d.match(/Worker:\s*([^(|]+?)\s*\(([^)]+)\)/)
   const ref = d.match(/Payment Ref:\s*([^|]+)/)
@@ -223,36 +213,6 @@ export default function EmployerDashboard() {
     load()
   }
 
-  // A declined offer needs the employer to pick a next step. This just
-  // notifies BeyondX with the choice — the team follows up to action it.
-  const onDeclinedChoice = (t: Task, choice: 'replace' | 'refund') => {
-    const emp = session.employer()
-    contact
-      .send({
-        name: orgName,
-        email: (emp?.email as string) || undefined,
-        phone: (emp?.phone as string) || undefined,
-        message:
-          `${orgName} responded to a declined offer.\n\n` +
-          `Task: ${t.taskType || '—'}\n` +
-          `Location: ${t.location || '—'}\n` +
-          `Amount: GHS ${Number(t.pay || 0).toFixed(2)}\n\n` +
-          `The employer would like: ${choice === 'replace' ? 'a replacement worker dispatched' : 'a refund'}.`,
-        category: 'task_declined_employer_choice',
-      })
-      .then(() => {
-        setToast({
-          id: Date.now(),
-          kind: 'success',
-          title: choice === 'replace' ? 'Replacement requested' : 'Refund requested',
-          detail: 'BeyondX will follow up shortly.',
-        })
-      })
-      .catch(() => {
-        setToast({ id: Date.now(), kind: 'info', title: 'Could not send request', detail: 'Please try again or use Support.' })
-      })
-  }
-
   return (
     <div className="min-h-screen bg-cream-100">
       <DashboardHeader role="EMPLOYER" title="Employer Dashboard" name={orgName} avatar={logo} onEditProfile={() => setEditing(true)} tasks={taskList} />
@@ -266,16 +226,29 @@ export default function EmployerDashboard() {
           </div>
         )}
 
-        <div className="flex items-center gap-2 overflow-x-auto border-b border-ink-900/10 pb-px" role="tablist" aria-label="Employer sections">
-          {([['hire', 'Hire Workers'], ['post', 'Post a Task'], ['history', `Dispatch History (${taskList.length})`], ['support', 'Support']] as const).map(([id, label]) => (
-            <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-              className={`shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40 ${tab === id ? 'border-forest-600 text-forest-700' : 'border-transparent text-ink-700 hover:text-ink-900'}`}>
-              {label}
+        <div className="flex items-center justify-between border-b border-ink-900/10 pb-0">
+          {/* Page title on the left */}
+          <p className="text-xs font-semibold uppercase tracking-widest text-ink-700/40">
+            {tab === 'hire' ? 'Browse workers' : tab === 'post' ? 'Post a task' : tab === 'history' ? 'Jobs' : 'Help'}
+          </p>
+          {/* Tabs on the right */}
+          <div className="flex items-center gap-1" role="tablist" aria-label="Employer sections">
+            {([['hire', 'Hire Workers'], ['post', 'Post a Task'], ['history', (() => { const n = taskList.filter(t => t.status === 'pending_confirmation').length; return n > 0 ? `My Jobs (${n})` : 'My Jobs' })()], ['support', 'Support']] as const).map(([id, label]) => (
+              <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
+                className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40 ${tab === id ? 'bg-forest-600/10 text-forest-700' : 'text-ink-700/70 hover:text-ink-900 hover:bg-ink-900/4'}`}>
+                {label}
+                {id === 'history' && taskList.filter(t => t.status === 'pending_confirmation').length > 0 && (
+                  <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white">
+                    {taskList.filter(t => t.status === 'pending_confirmation').length}
+                  </span>
+                )}
+              </button>
+            ))}
+            <button onClick={() => { setLoading(true); load() }} aria-label="Refresh"
+              className="ml-1 rounded-md p-2 text-ink-700/50 hover:bg-ink-900/5 hover:text-ink-700">
+              <RefreshCw size={13} aria-hidden="true" />
             </button>
-          ))}
-          <button onClick={() => { setLoading(true); load() }} aria-label="Refresh" className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-ink-900/15 px-3 py-1.5 text-xs font-medium text-ink-700 hover:bg-ink-900/5">
-            <RefreshCw size={13} aria-hidden="true" /> Refresh
-          </button>
+          </div>
         </div>
 
         {tab === 'hire' && (
@@ -297,14 +270,14 @@ export default function EmployerDashboard() {
                   Choose the type of work and we&rsquo;ll show you the workers certified for it.
                 </p>
 
-                <div className="mt-4 flex items-center gap-5 border-b border-ink-900/10" role="tablist" aria-label="Work location">
+                <div className="mt-4 inline-flex rounded-full bg-ink-900/5 p-1" role="tablist" aria-label="Work location">
                   {([['field', 'On the field'], ['remote', 'Remote']] as const).map(([id, label]) => (
                     <button
                       key={id}
                       role="tab"
                       aria-selected={workMode === id}
                       onClick={() => setWorkMode(id)}
-                      className={`border-b-2 pb-2.5 text-sm font-medium transition-colors ${workMode === id ? 'border-forest-600 text-forest-700' : 'border-transparent text-ink-700 hover:text-ink-900'}`}
+                      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${workMode === id ? 'bg-cream-50 text-ink-900 shadow-sm' : 'text-ink-700 hover:text-ink-900'}`}
                     >
                       {label}
                     </button>
@@ -379,54 +352,39 @@ export default function EmployerDashboard() {
                 </div>
 
                 {loading ? <div className="mt-5"><Skeleton /></div> : (() => {
-                  // Step 1 — screening questions before seeing workers
-                  if (!screeningDone) {
-                    return (
+                  const matches = sortWorkersForTask(
+                    workerList.filter((w) => wSkills(w).includes(pickedCategory)),
+                    taskFlags
+                  )
+                  const highRisk = isHighRisk(taskFlags)
+
+                  return (
+                    <>
+                      {/* Screening questions — always shown above worker list */}
                       <TaskScreening
                         category={pickedCategory!}
                         screening={screeningAnswers}
                         onUpdate={(s) => {
                           setScreeningAnswers(s)
                           setTaskFlags(s.flags)
+                          setScreeningDone(false)
                         }}
                         onDone={() => setScreeningDone(true)}
+                        done={screeningDone}
                       />
-                    )
-                  }
 
-                  const matches = sortWorkersForTask(
-                    workerList.filter((w) => wSkills(w).includes(pickedCategory)),
-                    taskFlags
-                  )
-                  const flagged = matches.filter(isBackgroundFlagged)
-                  const highRisk = isHighRisk(taskFlags)
-
-                  return (
-                    <>
-                      {/* Result banner with Edit answers */}
-                      <div className={`mt-5 mb-4 flex items-center justify-between rounded-xl px-4 py-2.5 ring-1 ${highRisk ? 'bg-clay-400/10 ring-clay-400/30' : 'bg-forest-600/8 ring-forest-600/20'}`}>
-                        <p className={`flex items-center gap-2 text-sm font-medium ${highRisk ? 'text-clay-700' : 'text-forest-800'}`}>
-                          <ShieldCheck size={15} aria-hidden="true" />
-                          {highRisk
-                            ? 'Restricted task — some workers excluded based on your answers'
-                            : `Open task — all vetted workers eligible${flagged.length > 0 ? ` · ${flagged.length} prioritised first` : ''}`}
-                        </p>
-                        <button onClick={() => setScreeningDone(false)}
-                          className="ml-3 shrink-0 text-xs font-medium underline underline-offset-2 opacity-60 hover:opacity-100">
-                          Edit answers
-                        </button>
-                      </div>
-
-                      {/* Multi-dispatch bar */}
+                      {/* Worker list — shown once screening complete */}
+                      {screeningDone && (
+                        <>
                       {selectedWorkers.size > 0 && (
-                        <div className="mb-3 flex items-center justify-between rounded-xl bg-forest-600 px-4 py-3">
+                        <div className="mt-4 mb-3 flex items-center justify-between rounded-xl bg-forest-600 px-4 py-3">
                           <span className="text-sm font-semibold text-cream-50">
                             {selectedWorkers.size} worker{selectedWorkers.size > 1 ? 's' : ''} selected
                           </span>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => setSelectedWorkers(new Set())}
-                              className="rounded-full bg-cream-50/15 px-3 py-1.5 text-xs font-medium text-cream-50 hover:bg-cream-50/25"
+                              className="rounded-lg bg-cream-50/15 px-3 py-1.5 text-xs font-medium text-cream-50 hover:bg-cream-50/25"
                             >
                               Clear
                             </button>
@@ -436,7 +394,7 @@ export default function EmployerDashboard() {
                                 setDispatchQueue(queue)
                                 setDispatching(queue[0])
                               }}
-                              className="rounded-full bg-cream-50 px-4 py-1.5 text-xs font-semibold text-forest-700 hover:bg-cream-100"
+                              className="rounded-lg bg-cream-50 px-4 py-1.5 text-xs font-semibold text-forest-700 hover:bg-cream-100"
                             >
                               <Send size={12} className="mr-1.5 inline" aria-hidden="true" />
                               Dispatch all
@@ -446,7 +404,7 @@ export default function EmployerDashboard() {
                       )}
 
                       {matches.length ? (
-                        <ul className="mt-1 divide-y divide-ink-900/10 overflow-hidden rounded-2xl bg-cream-50 shadow-sm ring-1 ring-ink-900/5">
+                        <ul className="mt-3 divide-y divide-ink-900/10 overflow-hidden rounded-2xl bg-cream-50 shadow-sm ring-1 ring-ink-900/8">
                           {matches.map((w) => {
                             const wid = String(w.id)
                             const isSelected = selectedWorkers.has(wid)
@@ -476,22 +434,22 @@ export default function EmployerDashboard() {
                                       <span className="flex items-center gap-2">
                                         <span className="block truncate font-serif text-base font-medium text-ink-900">{wName(w)}</span>
                                         {isBackgroundFlagged(w) && !highRisk && (
-                                          <span className="shrink-0 rounded-full bg-forest-600/10 px-2 py-0.5 text-[10px] font-semibold text-forest-700">Priority</span>
+                                          <span className="shrink-0 text-[11px] font-semibold text-forest-700">Priority</span>
                                         )}
                                         {Boolean(w.hasTools) && (
-                                          <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Has tools</span>
+                                          <span className="shrink-0 text-[11px] font-medium text-amber-700">Has tools</span>
                                         )}
                                       </span>
-                                      <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-700">
+                                      <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-700">
                                         {w.rating && Number(w.rating) > 0
                                           ? <span className="inline-flex items-center gap-0.5"><Star size={12} aria-hidden="true" className="fill-forest-600 text-forest-600" /> {Number(w.rating).toFixed(1)}</span>
                                           : <span>New worker</span>}
-                                        <span>· {Number(w.tasksCompleted ?? 0)} task{Number(w.tasksCompleted ?? 0) === 1 ? '' : 's'} completed</span>
-                                        {Boolean(w.isBusy) && <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">On a job</span>}
+                                        <span>{Number(w.tasksCompleted ?? 0)} task{Number(w.tasksCompleted ?? 0) === 1 ? '' : 's'} completed</span>
+                                        {Boolean(w.isBusy) && <span className="font-medium text-amber-700">On a job</span>}
                                       </span>
                                     </span>
                                     <span className="hidden shrink-0 text-sm font-medium text-forest-700 sm:inline">View profile</span>
-                                    <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-ink-700" />
+                                    <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-ink-700/40" />
                                   </button>
                                 </div>
                               </li>
@@ -505,6 +463,8 @@ export default function EmployerDashboard() {
                             : `No workers are certified for ${pickedCategory} yet. Post a task instead and we'll match someone as soon as they join.`
                           } />
                         </div>
+                      )}
+                        </>
                       )}
                     </>
                   )
@@ -526,52 +486,94 @@ export default function EmployerDashboard() {
 
         {tab === 'history' && (
           <div className="mt-6">
-            {loading ? <Skeleton /> : taskList.length ? (
-              <div className="divide-y divide-ink-900/8 rounded-lg ring-1 ring-ink-900/8">
-                {taskList.map((t) => {
-                  const s = st(t.status)
-                  const worker = typeof t.employer === 'string' ? t.employer : ''
-                  const rev = t.reviews?.[0]?.rating
-                  return (
-                    <div key={String(t.id)} className="p-4 sm:p-5">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {loading ? <Skeleton /> : taskList.length ? (() => {
+              const urgent = taskList.filter((t) => t.status === 'pending_confirmation')
+              const active = taskList.filter((t) => ['payment_pending', 'offered', 'accepted'].includes(String(t.status)))
+              const done = taskList.filter((t) => ['employer_confirmed', 'completed', 'payment_rejected'].includes(String(t.status)))
+
+              const TaskItem = ({ t }: { t: Task }) => {
+                const s = st(t.status)
+                const { workerName } = dispatchDetails(t)
+                const rev = t.reviews?.[0]?.rating
+                const isUrgent = t.status === 'pending_confirmation'
+
+                return (
+                  <div className={`relative overflow-hidden rounded-2xl bg-cream-50 shadow-sm ring-1 ring-ink-900/8 pl-1`}>
+                    {/* Left color bar */}
+                    <div className={`absolute inset-y-0 left-0 w-1 rounded-l-2xl ${s.bar}`} />
+
+                    <div className="p-5 pl-5">
+                      {/* Header */}
+                      <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-serif text-base font-medium text-ink-900">{t.taskType || 'Task'}</p>
-                          <p className="mt-0.5 truncate text-sm text-ink-700">{t.description || worker}{t.location ? ` · ${t.location}` : ''}</p>
-                          {rev ? <div className="mt-1 flex items-center gap-2 text-xs text-ink-700">You rated <Stars n={Number(rev)} /></div> : null}
+                          <p className="font-serif text-base font-semibold text-ink-900">{t.taskType || 'Task'}</p>
+                          <p className="mt-0.5 text-sm text-ink-700">
+                            {workerName && <span className="font-medium text-ink-800">{workerName}</span>}
+                            {workerName && t.location ? ' · ' : ''}{t.location || ''}
+                            {t.duration ? ` · ${t.duration}` : ''}
+                          </p>
                         </div>
-                        <div className="flex shrink-0 items-center gap-4">
-                          <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-ink-700">
-                            <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${s.dot}`} /> {s.label}
-                          </span>
-                          {t.status === 'pending_confirmation' && (
-                            <button onClick={() => setRating(t)} className="shrink-0 rounded-md bg-forest-600 px-3.5 py-2 text-xs font-semibold text-cream-50 transition-colors hover:bg-forest-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
-                              Confirm work &amp; rate
-                            </button>
-                          )}
+                        <div className="shrink-0 text-right">
+                          <p className={s.color + ' text-sm font-semibold'}>{s.label}</p>
+                          {rev && <div className="mt-1 flex items-center justify-end gap-1"><Stars n={Number(rev)} /></div>}
                         </div>
                       </div>
-                      {t.status === 'accepted' && <LiveLocation taskId={t.id} />}
-                      {s.note && <p className="mt-3 flex items-start gap-2 border-t border-ink-900/10 pt-3 text-xs leading-relaxed text-ink-700"><Info size={13} aria-hidden="true" className="mt-0.5 shrink-0 text-clay-500" /> {s.note}</p>}
-                      {t.status === 'declined' && (
-                        <div className="mt-3 flex flex-wrap gap-2 border-t border-ink-900/10 pt-3">
+
+                      {/* Status note */}
+                      {s.note && !isUrgent && (
+                        <p className="mt-2.5 text-xs leading-relaxed text-ink-700/70">{s.note}</p>
+                      )}
+
+                      {/* Urgent confirm action */}
+                      {isUrgent && (
+                        <div className="mt-4 border-t border-amber-100 pt-4">
+                          <p className="text-sm text-ink-700">The worker has marked this job as complete.</p>
                           <button
-                            onClick={() => onDeclinedChoice(t, 'replace')}
-                            className="rounded-md bg-forest-600 px-3.5 py-2 text-xs font-semibold text-cream-50 transition-colors hover:bg-forest-500">
-                            Request a replacement worker
-                          </button>
-                          <button
-                            onClick={() => onDeclinedChoice(t, 'refund')}
-                            className="rounded-md border border-ink-900/15 px-3.5 py-2 text-xs font-medium text-ink-700 transition-colors hover:bg-ink-900/5">
-                            Request a refund
+                            onClick={() => setRating(t)}
+                            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-forest-600 px-5 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40"
+                          >
+                            <ShieldCheck size={15} aria-hidden="true" /> Confirm work & release payment
                           </button>
                         </div>
                       )}
+
+                      {/* Live location for accepted jobs */}
+                      {t.status === 'accepted' && <LiveLocation taskId={t.id} />}
                     </div>
-                  )
-                })}
-              </div>
-            ) : <Empty text="No dispatches yet. Hire a worker to get started." />}
+                  </div>
+                )
+              }
+
+              return (
+                <div className="space-y-6">
+                  {urgent.length > 0 && (
+                    <section>
+                      <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-700">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-600 text-[9px] font-bold text-white">{urgent.length}</span>
+                        Need your confirmation
+                      </h2>
+                      <div className="space-y-3">{urgent.map((t) => <TaskItem key={String(t.id)} t={t} />)}</div>
+                    </section>
+                  )}
+
+                  {active.length > 0 && (
+                    <section>
+                      <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-ink-700/50">In progress</h2>
+                      <div className="space-y-3">{active.map((t) => <TaskItem key={String(t.id)} t={t} />)}</div>
+                    </section>
+                  )}
+
+                  {done.length > 0 && (
+                    <section>
+                      <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-ink-700/50">Completed</h2>
+                      <div className="space-y-3">{done.map((t) => <TaskItem key={String(t.id)} t={t} />)}</div>
+                    </section>
+                  )}
+                </div>
+              )
+            })() : (
+              <Empty text="No jobs yet. Go to Hire Workers to dispatch your first worker." />
+            )}
           </div>
         )}
       </main>
@@ -651,20 +653,15 @@ function PhoneCopy({ phone }: { phone: string }) {
 //   C. Complexity — basic or technical? — feeds the tier selector in dispatch
 // ---------------------------------------------------------------------------
 
-type ToolAnswer = 'none' | 'employer' | 'worker'
 type TierAnswer = 'basic' | 'skilled'
 
 export interface ScreeningAnswers {
   flags: TaskFlags
-  toolsNeeded: boolean
-  toolProvider: ToolAnswer   // only meaningful when toolsNeeded = true
   tier: TierAnswer
 }
 
 export const DEFAULT_SCREENING: ScreeningAnswers = {
   flags: { cashUnsupervised: false, vulnerableContact: false, propertyAccess: false },
-  toolsNeeded: false,
-  toolProvider: 'employer',
   tier: 'basic',
 }
 
@@ -679,14 +676,9 @@ const TIER_EXAMPLES: Record<string, { basic: string; skilled: string }> = {
   'Community Services':             { basic: 'Waste collection, public space sweeping', skilled: 'Drainage maintenance, hazardous waste handling' },
 }
 
-// Categories where tools are relevant (tool modifier applies in pricing)
-const TOOL_CATEGORIES = new Set(['Agriculture & Environment', 'Construction, Maintenance & Repairs', 'Facility & Cleaning'])
-
 // All screening questions in sequence
 type ScreeningStep =
   | { type: 'risk'; key: keyof TaskFlags; question: string; hint: string }
-  | { type: 'tools-needed'; question: string; hint: string }
-  | { type: 'tool-provider'; question: string; hint: string }
   | { type: 'tier'; question: string; basicLabel: string; skilledLabel: string; basicExample: string; skilledExample: string }
 
 function buildSteps(category: string): ScreeningStep[] {
@@ -695,11 +687,6 @@ function buildSteps(category: string): ScreeningStep[] {
     { type: 'risk', key: 'vulnerableContact', question: 'Will the worker be alone in a private home or with vulnerable people?', hint: 'e.g. working inside a private residence, caring for children or elderly' },
     { type: 'risk', key: 'propertyAccess', question: 'Will the worker have unsupervised access to valuables or property?', hint: 'e.g. access to a storeroom, safe, vehicle, or high-value goods without supervision' },
   ]
-
-  if (TOOL_CATEGORIES.has(category)) {
-    steps.push({ type: 'tools-needed', question: 'Will tools or equipment be needed for this task?', hint: 'e.g. cleaning equipment, construction tools, agricultural sprayers' })
-    // tool-provider is added conditionally after tools-needed = yes
-  }
 
   const examples = TIER_EXAMPLES[category]
   if (examples) {
@@ -721,196 +708,150 @@ function TaskScreening({
   screening,
   onUpdate,
   onDone,
+  done = false,
 }: {
   category: string
   screening: ScreeningAnswers
   onUpdate: (s: ScreeningAnswers) => void
   onDone: () => void
+  done?: boolean
 }) {
-  const baseSteps = buildSteps(category)
-  // Insert the tool-provider question right after tools-needed = yes
-  const steps: ScreeningStep[] = []
-  for (const s of baseSteps) {
-    steps.push(s)
-    if (s.type === 'tools-needed' && screening.toolsNeeded) {
-      steps.push({ type: 'tool-provider', question: 'Who will provide the tools?', hint: 'This affects the price — workers who bring their own tools receive a 15% surcharge' })
-    }
-  }
-
-  const [stepIdx, setStepIdx] = useState(0)
-  const [showResult, setShowResult] = useState(false)
+  const steps = buildSteps(category)
+  const [answered, setAnswered] = useState<Set<number>>(new Set())
 
   // Reset when category changes
-  useEffect(() => { setStepIdx(0); setShowResult(false) }, [category])
+  useEffect(() => { setAnswered(new Set()) }, [category])
 
-  const current = steps[stepIdx]
-  const progress = Math.round((stepIdx / steps.length) * 100)
-
-  const next = () => {
-    if (stepIdx + 1 < steps.length) {
-      setStepIdx(stepIdx + 1)
-    } else {
-      setShowResult(true)
-    }
-  }
-
-  const answerRisk = (key: keyof TaskFlags, yes: boolean) => {
-    onUpdate({ ...screening, flags: { ...screening.flags, [key]: yes } })
-    next()
-  }
-
-  const answerToolsNeeded = (yes: boolean) => {
-    onUpdate({ ...screening, toolsNeeded: yes, toolProvider: yes ? 'employer' : 'none' })
-    // rebuild steps next render, then advance
-    setStepIdx((i) => i + 1)
-  }
-
-  const answerToolProvider = (v: ToolAnswer) => {
-    onUpdate({ ...screening, toolProvider: v })
-    next()
-  }
-
-  const answerTier = (t: TierAnswer) => {
-    onUpdate({ ...screening, tier: t })
-    next()
-  }
-
+  const allAnswered = steps.every((_, i) => answered.has(i))
   const highRisk = isHighRisk(screening.flags)
 
-  if (showResult) {
+  // When all answered, auto-call onDone once
+  useEffect(() => {
+    if (allAnswered && !done) onDone()
+  }, [allAnswered]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const answerRisk = (idx: number, key: keyof TaskFlags, yes: boolean) => {
+    onUpdate({ ...screening, flags: { ...screening.flags, [key]: yes } })
+    setAnswered((prev) => new Set(prev).add(idx))
+  }
+
+  const answerTier = (idx: number, t: TierAnswer) => {
+    onUpdate({ ...screening, tier: t })
+    setAnswered((prev) => new Set(prev).add(idx))
+  }
+
+  // Collapsed summary once done
+  if (done) {
     return (
-      <div className="mt-6">
-        <div className={`rounded-2xl p-6 text-center ring-1 ${highRisk ? 'bg-clay-400/8 ring-clay-400/30' : 'bg-forest-600/8 ring-forest-600/20'}`}>
-          <div className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full ${highRisk ? 'bg-clay-400/20' : 'bg-forest-600/15'}`}>
-            {highRisk
-              ? <ShieldAlert size={22} aria-hidden="true" className="text-clay-700" />
-              : <ShieldCheck size={22} aria-hidden="true" className="text-forest-700" />}
-          </div>
-          <p className={`font-serif text-xl font-medium ${highRisk ? 'text-clay-800' : 'text-forest-900'}`}>
-            {highRisk ? 'Restricted task' : 'Open to all workers'}
-          </p>
-          <p className={`mt-2 text-sm leading-relaxed ${highRisk ? 'text-clay-700' : 'text-forest-800'}`}>
-            {highRisk
-              ? 'Workers with background flags will not be matched to this job.'
-              : 'All vetted workers are eligible. Workers with verified background records appear first.'}
-          </p>
-          {screening.toolsNeeded && (
-            <p className="mt-2 text-sm text-ink-700">
-              <span className="font-medium">Tools:</span> {screening.toolProvider === 'employer' ? 'You will provide — standard rate applies.' : 'Worker brings tools — 15% surcharge added to rate.'}
-            </p>
-          )}
-          <p className="mt-1 text-sm text-ink-700">
-            <span className="font-medium">Complexity:</span> {screening.tier === 'basic' ? 'Basic' : 'Technical / Skilled'}
-          </p>
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
-            <button onClick={onDone}
-              className={`rounded-full px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:scale-[1.02] active:scale-[0.98] ${highRisk ? 'bg-clay-600 hover:bg-clay-500' : 'bg-forest-600 hover:bg-forest-500'}`}>
-              See available workers
-            </button>
-            <button onClick={() => { setStepIdx(0); setShowResult(false); onUpdate(DEFAULT_SCREENING) }}
-              className="rounded-full border border-ink-900/15 px-6 py-3 text-sm font-medium text-ink-700 hover:bg-ink-900/5">
-              Start over
-            </button>
-          </div>
-        </div>
+      <div className="mt-5 flex items-center justify-between rounded-xl border border-ink-900/10 bg-cream-50 px-4 py-3">
+        <p className="text-sm text-ink-700">
+          {highRisk
+            ? <span className="font-medium text-red-700">Restricted — some workers excluded</span>
+            : <span className="font-medium text-forest-700">Open to all vetted workers</span>}
+          <span className="ml-2 text-ink-700/50">· {screening.tier === 'skilled' ? 'Technical rate' : 'Standard rate'}</span>
+        </p>
+        <button
+          onClick={() => { onUpdate({ ...screening }); setAnswered(new Set()) }}
+          className="ml-4 shrink-0 text-xs font-medium text-ink-700/60 underline underline-offset-2 hover:text-ink-900"
+        >
+          Edit
+        </button>
       </div>
     )
   }
 
-  if (!current) return null
-
   return (
-    <div className="mt-6">
-      {/* Progress bar */}
-      <div className="mb-5">
-        <div className="mb-1.5 flex items-center justify-between text-xs text-ink-700/60">
-          <span>Question {stepIdx + 1} of {steps.length}</span>
-          <span>{progress}% complete</span>
+    <div className="mt-5">
+      <div className="divide-y divide-ink-900/8 overflow-hidden rounded-2xl border border-ink-900/10 bg-cream-50">
+
+        {/* Header */}
+        <div className="px-5 py-4">
+          <p className="text-sm font-semibold text-ink-900">A few quick questions about this job</p>
+          <p className="mt-0.5 text-xs text-ink-700/60">Helps us match the right workers and set the correct rate</p>
         </div>
-        <div className="h-1.5 w-full rounded-full bg-ink-900/8">
-          <div className="h-1.5 rounded-full bg-forest-600 transition-all duration-300" style={{ width: `${progress}%` }} />
-        </div>
-      </div>
 
-      {/* Question card */}
-      <div className="rounded-2xl bg-cream-50 p-6 shadow-sm ring-1 ring-ink-900/8">
+        {/* Questions */}
+        {steps.map((step, idx) => {
+          const isAnswered = answered.has(idx)
 
-        {/* Risk questions */}
-        {(current.type === 'risk' || current.type === 'tools-needed') && (
-          <>
-            <p className="font-serif text-lg font-medium leading-snug text-ink-900">{current.question}</p>
-            <p className="mt-1.5 text-sm leading-relaxed text-ink-700/70">{current.hint}</p>
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <button onClick={() => current.type === 'risk' ? answerRisk(current.key, true) : answerToolsNeeded(true)}
-                className="flex items-center justify-center gap-2 rounded-xl border border-ink-900/15 bg-white px-4 py-3 text-sm font-medium text-ink-900 transition-colors hover:border-forest-600/50 hover:bg-forest-600/5 active:scale-[0.98]">
-                <Check size={16} aria-hidden="true" className="text-ink-700" /> Yes
-              </button>
-              <button onClick={() => current.type === 'risk' ? answerRisk(current.key, false) : answerToolsNeeded(false)}
-                className="flex items-center justify-center gap-2 rounded-xl border border-ink-900/15 bg-white px-4 py-3 text-sm font-medium text-ink-900 transition-colors hover:border-forest-600/50 hover:bg-forest-600/5 active:scale-[0.98]">
-                <X size={16} aria-hidden="true" className="text-ink-700" /> No
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* Who provides tools */}
-        {current.type === 'tool-provider' && (
-          <>
-            <p className="font-serif text-lg font-medium leading-snug text-ink-900">{current.question}</p>
-            <p className="mt-1.5 text-sm leading-relaxed text-ink-700/70">{current.hint}</p>
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <button onClick={() => answerToolProvider('employer')}
-                className="flex flex-col gap-1 rounded-xl border border-ink-900/15 bg-white p-4 text-left transition-colors hover:border-forest-600/50 hover:bg-forest-600/5 active:scale-[0.98]">
-                <span className="text-sm font-medium text-ink-900">I will provide them</span>
-                <span className="text-xs text-ink-700/70">Standard rate</span>
-              </button>
-              <button onClick={() => answerToolProvider('worker')}
-                className="flex flex-col gap-1 rounded-xl border border-ink-900/15 bg-white p-4 text-left transition-colors hover:border-forest-600/50 hover:bg-forest-600/5 active:scale-[0.98]">
-                <span className="text-sm font-medium text-ink-900">Worker brings tools</span>
-                <span className="text-xs text-ink-700/70">+15% surcharge</span>
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* Basic vs Technical */}
-        {current.type === 'tier' && (
-          <>
-            <p className="font-serif text-lg font-medium leading-snug text-ink-900">{current.question}</p>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <button onClick={() => answerTier('basic')}
-                className="flex flex-col gap-2 rounded-xl border border-ink-900/15 bg-white p-4 text-left transition-colors hover:border-forest-600/50 hover:bg-forest-600/5 active:scale-[0.98]">
-                <span className="text-sm font-medium text-ink-900">{current.basicLabel}</span>
-                <span className="text-xs leading-relaxed text-ink-700/70">{current.basicExample}</span>
-              </button>
-              <button onClick={() => answerTier('skilled')}
-                className="flex flex-col gap-2 rounded-xl border border-ink-900/15 bg-white p-4 text-left transition-colors hover:border-forest-600/50 hover:bg-forest-600/5 active:scale-[0.98]">
-                <span className="text-sm font-medium text-ink-900">{current.skilledLabel}</span>
-                <span className="text-xs leading-relaxed text-ink-700/70">{current.skilledExample}</span>
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Running summary of previous answers */}
-      {stepIdx > 0 && (
-        <div className="mt-3 divide-y divide-ink-900/8 overflow-hidden rounded-xl ring-1 ring-ink-900/8">
-          {steps.slice(0, stepIdx).map((s, i) => {
-            let label = ''
-            if (s.type === 'risk') label = screening.flags[s.key] ? 'Yes' : 'No'
-            else if (s.type === 'tools-needed') label = screening.toolsNeeded ? 'Yes' : 'No'
-            else if (s.type === 'tool-provider') label = screening.toolProvider === 'employer' ? 'You provide' : 'Worker brings (+15%)'
-            else if (s.type === 'tier') label = screening.tier === 'basic' ? 'Basic' : 'Technical'
+          if (step.type === 'risk') {
+            const flagVal = screening.flags[step.key]
             return (
-              <div key={i} className="flex items-center justify-between gap-3 bg-cream-50 px-3.5 py-2.5">
-                <span className="text-xs text-ink-700">{s.question}</span>
-                <span className="shrink-0 text-xs font-medium text-ink-900">{label}</span>
+              <div key={idx} className="px-5 py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-ink-900">{step.question}</p>
+                    {step.hint && <p className="mt-0.5 text-xs text-ink-700/60">{step.hint}</p>}
+                  </div>
+                  <div className="flex shrink-0 gap-1.5">
+                    <button
+                      onClick={() => answerRisk(idx, step.key, true)}
+                      className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-all ${
+                        isAnswered && flagVal
+                          ? 'bg-red-600 text-white'
+                          : 'border border-ink-900/15 text-ink-700 hover:border-ink-900/30 hover:bg-ink-900/4'
+                      }`}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      onClick={() => answerRisk(idx, step.key, false)}
+                      className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-all ${
+                        isAnswered && !flagVal
+                          ? 'bg-forest-600 text-white'
+                          : 'border border-ink-900/15 text-ink-700 hover:border-ink-900/30 hover:bg-ink-900/4'
+                      }`}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
               </div>
             )
-          })}
-        </div>
-      )}
+          }
+
+          if (step.type === 'tier') {
+            return (
+              <div key={idx} className="px-5 py-4">
+                <p className="mb-3 text-sm font-medium text-ink-900">{step.question}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => answerTier(idx, 'basic')}
+                    className={`rounded-xl border p-3.5 text-left transition-all ${
+                      isAnswered && screening.tier === 'basic'
+                        ? 'border-ink-900 bg-ink-900 text-cream-50'
+                        : 'border-ink-900/15 text-ink-700 hover:border-ink-900/30'
+                    }`}
+                  >
+                    <span className="block text-sm font-semibold">{step.basicLabel}</span>
+                    <span className="mt-0.5 block text-[11px] leading-snug opacity-70">{step.basicExample}</span>
+                  </button>
+                  <button
+                    onClick={() => answerTier(idx, 'skilled')}
+                    className={`rounded-xl border p-3.5 text-left transition-all ${
+                      isAnswered && screening.tier === 'skilled'
+                        ? 'border-ink-900 bg-ink-900 text-cream-50'
+                        : 'border-ink-900/15 text-ink-700 hover:border-ink-900/30'
+                    }`}
+                  >
+                    <span className="block text-sm font-semibold">{step.skilledLabel}</span>
+                    <span className="mt-0.5 block text-[11px] leading-snug opacity-70">{step.skilledExample}</span>
+                  </button>
+                </div>
+              </div>
+            )
+          }
+
+          return null
+        })}
+
+        {/* Footer — shown once all answered but before auto-advancing */}
+        {allAnswered && (
+          <div className="px-5 py-3 text-xs text-ink-700/50">
+            All questions answered — showing available workers below
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -1036,7 +977,7 @@ function WorkerProfileModal({ worker, category, onClose, onDispatch }: { worker:
                           )}
                         </span>
                         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.verified ? 'bg-forest-600/10 text-forest-700' : 'bg-ink-900/6 text-ink-700/60'}`}>
-                          {c.verified ? '✓ Verified' : 'Declared'}
+                          {c.verified ? 'Verified' : 'Declared'}
                         </span>
                       </li>
                     ))}
@@ -1076,17 +1017,15 @@ function DispatchModal({ worker, category, screening, dispatchQueue, onClose, on
   useEsc(onClose)
   const [days, setDays] = useState(1)
   const [location, setLocation] = useState('')
-  const [description, setDescription] = useState('')
   const [taskType, setTaskType] = useState(category || wSkills(worker)[0] || 'General Task')
   const [payRef, setPayRef] = useState('')
   const [method, setMethod] = useState('')
   const [busy, setBusy] = useState(false)
   const cat = allCategories.find((c) => c.title === taskType)
-  // Pre-fill tier from screening if provided
+  // Pre-fill tier from screening
   const [tier, setTier] = useState<'basic' | 'skilled'>(screening?.tier ?? 'basic')
   useEffect(() => { setTier(screening?.tier ?? 'basic') }, [screening])
-  // Whether this task's rate gets the tools surcharge is decided by the
-  // worker's own profile — not asked again here.
+  // Tool surcharge comes from the WORKER's profile (hasTools), not asked again here
   const workerProvidesTools = Boolean(worker.hasTools)
   // Logistics: distance + vehicle
   const [distanceKm, setDistanceKm] = useState(3)
@@ -1121,7 +1060,6 @@ function DispatchModal({ worker, category, screening, dispatchQueue, onClose, on
       await tasksApi.dispatch({
         worker,
         taskType,
-        description,
         location: cat?.mode === 'remote' ? 'Remote' : location,
         duration,
         pay: workerGets,
@@ -1139,20 +1077,17 @@ function DispatchModal({ worker, category, screening, dispatchQueue, onClose, on
       <div role="dialog" aria-modal="true" aria-labelledby="dp-title" className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-cream-50 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-1 flex items-center justify-between">
           <h2 id="dp-title" className="font-serif text-xl font-medium text-ink-900">
-            Dispatch {wName(worker).split(' ')[0]}
+            Book {wName(worker).split(' ')[0]}
             {screening && dispatchQueue && dispatchQueue.length > 1 && (
-              <span className="ml-2 rounded-full bg-forest-600/10 px-2 py-0.5 text-sm font-medium text-forest-700">
+              <span className="ml-2 text-sm font-normal text-ink-700/60">
                 {dispatchQueue.findIndex((w) => String(w.id) === String(worker.id)) + 1} of {dispatchQueue.length}
               </span>
             )}
           </h2>
-          <button onClick={onClose} aria-label="Cancel dispatch" className="rounded-lg p-1 text-ink-700 hover:bg-ink-900/5"><X size={18} aria-hidden="true" /></button>
+          <button onClick={onClose} aria-label="Cancel" className="rounded-lg p-1 text-ink-700 hover:bg-ink-900/5"><X size={18} aria-hidden="true" /></button>
         </div>
-        <p className="mb-4 text-sm text-ink-700">
-          Send your payment via mobile money first, then enter the reference number below.
-          <span className="mt-1.5 block rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
-            BeyondX will verify your payment before the worker is notified. This usually takes just a few minutes during business hours.
-          </span>
+        <p className="mb-5 mt-1 text-sm text-ink-700/70">
+          Fill in the job details, send payment via MoMo, and submit. BeyondX verifies the payment before notifying the worker.
         </p>
 
         <div className="space-y-4">
@@ -1162,14 +1097,6 @@ function DispatchModal({ worker, category, screening, dispatchQueue, onClose, on
             <select value={taskType} onChange={(e) => setTaskType(e.target.value)} className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30">
               {allCategories.map((c) => <option key={c.title}>{c.title}</option>)}
             </select>
-          </label>
-
-          {/* Job description — shown to the worker */}
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-ink-700">Job description <span className="font-normal text-ink-700/60">(shown to the worker)</span></span>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
-              placeholder="What needs doing, any specifics the worker should know"
-              className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
           </label>
 
           {/* Complexity tier */}
@@ -1220,20 +1147,16 @@ function DispatchModal({ worker, category, screening, dispatchQueue, onClose, on
             </div>
           )}
 
-          {/* Tool modifier — determined automatically from the worker's profile */}
+          {/* Tool modifier — derived from worker's profile, not asked again */}
           {cat?.toolModifier && (
-            <div className="flex items-start gap-3 rounded-xl border border-ink-900/10 bg-cream-100 p-3.5">
-              <Wrench size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-ink-700" />
-              <span>
-                <span className="block text-sm font-medium text-ink-900">
-                  {workerProvidesTools ? `${wName(worker).split(' ')[0]} brings their own tools` : `${wName(worker).split(' ')[0]} does not have their own tools`}
-                </span>
-                <span className="block text-xs text-ink-700/80">
-                  {workerProvidesTools
-                    ? `15% tool surcharge applied automatically (+${cedis(Math.round((((tier === 'skilled' && cat.skilledRate) ? cat.skilledRate : cat.rate)) * TOOL_SURCHARGE_RATE))})`
-                    : 'Standard rate — please provide the tools for this task.'}
-                </span>
-              </span>
+            <div className="rounded-xl border border-ink-900/10 bg-cream-100 px-3.5 py-3">
+              <p className="text-sm text-ink-900">
+                <span className="font-medium">Tools: </span>
+                {workerProvidesTools
+                  ? <span className="text-forest-700">Worker brings their own (+{cedis(Math.round((((tier === 'skilled' && cat.skilledRate) ? cat.skilledRate : cat.rate)) * TOOL_SURCHARGE_RATE))} surcharge applied)</span>
+                  : <span className="text-ink-700/70">Employer provides — no surcharge</span>}
+              </p>
+              <p className="mt-0.5 text-xs text-ink-700/60">Based on {wName(worker).split(' ')[0]}'s profile settings</p>
             </div>
           )}
 
@@ -1276,47 +1199,44 @@ function DispatchModal({ worker, category, screening, dispatchQueue, onClose, on
           )}
         </div>
 
-        {/* Price breakdown */}
-        <div className="mt-4 flex items-center justify-between rounded-xl bg-forest-600/5 p-4 ring-1 ring-forest-600/15">
-          <span className="min-w-0 text-sm text-ink-700">
-            Amount to pay
-            <span className="mt-1 block text-xs leading-relaxed text-ink-700/80">
-              {cedis(workerGets)} to the worker
-              <span className="block">+ {cedis(fee)} BeyondX service fee</span>
-            </span>
-          </span>
-          <span className="shrink-0 text-right">
-            <span className="block font-serif text-lg font-semibold text-ink-900">{cedis(pay)}</span>
-            <span className="block text-[11px] text-ink-700/80">
-              {cat?.distancePricing
-                ? `${distanceKm}km delivery`
-                : `${cedis(baseRate)}/day × ${effectiveDays === 0.5 ? 'half day' : `${effectiveDays} day${effectiveDays === 1 ? '' : 's'}`}`}
-            </span>
-          </span>
+        {/* Price breakdown — prominent but clean */}
+        <div className="mt-5 rounded-2xl border border-ink-900/10 overflow-hidden">
+          <div className="bg-ink-900 px-5 py-4">
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm font-medium text-cream-200/70">Total to pay BeyondX</span>
+              <span className="font-serif text-3xl font-semibold text-cream-50">{cedis(pay)}</span>
+            </div>
+            <div className="mt-1.5 flex items-center justify-between text-xs text-cream-200/50">
+              <span>{cedis(workerGets)} to worker + {cedis(fee)} service fee</span>
+              <span>{cat?.distancePricing ? `${distanceKm} km` : `${cedis(baseRate)}/day × ${effectiveDays}d`}</span>
+            </div>
+          </div>
         </div>
 
         <div className="mt-4">
-          <span className="mb-2 block text-xs font-medium text-ink-700">How did you pay?</span>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-ink-700/50">How did you pay?</p>
           <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Payment method">
             {PAYMENT_METHODS.map((m) => (
               <button key={m.id} type="button" role="radio" aria-checked={method === m.id} aria-label={m.alt} onClick={() => setMethod(m.id)}
-                className={`flex h-16 items-center justify-center rounded-xl border bg-white p-2 transition-all ${method === m.id ? 'border-forest-600 ring-2 ring-forest-600/30' : 'border-ink-900/15 hover:border-forest-500/50'}`}>
-                <img src={m.logo} alt={m.alt} className="max-h-9 w-auto object-contain" />
+                className={`flex h-14 items-center justify-center rounded-xl border bg-white p-2 transition-all ${method === m.id ? 'border-ink-900 ring-2 ring-ink-900/20' : 'border-ink-900/12 hover:border-ink-900/30'}`}>
+                <img src={m.logo} alt={m.alt} className="max-h-8 w-auto object-contain" />
               </button>
             ))}
           </div>
         </div>
 
-        <label className="mt-4 block">
-          <span className="mb-1 block text-xs font-medium text-ink-700">Payment reference / transaction ID</span>
-          <input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder="e.g. 1234567890" className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
+        <label className="mt-3 block">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-widest text-ink-700/50">Transaction reference</span>
+          <input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder="e.g. 1234567890"
+            className="w-full rounded-xl border border-ink-900/15 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-ink-900 focus:ring-2 focus:ring-ink-900/10" />
         </label>
 
-        <button onClick={submit} disabled={!payRef.trim() || !method || busy} className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
-          <ShieldCheck size={16} aria-hidden="true" /> {busy ? 'Submitting…' : 'Submit for BeyondX review'}
+        <button onClick={submit} disabled={!payRef.trim() || !method || busy}
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-ink-900 px-6 py-3.5 text-sm font-semibold text-cream-50 transition-all hover:bg-ink-800 active:scale-[0.98] disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-900/40">
+          {busy ? 'Submitting…' : `Submit booking — ${cedis(pay)}`}
         </button>
-        <p className="mt-2 text-center text-xs text-ink-700/70">
-          The worker will only be contacted after BeyondX confirms your payment.
+        <p className="mt-2 text-center text-[11px] text-ink-700/50">
+          Worker is contacted only after BeyondX confirms the payment.
         </p>
       </div>
     </div>
@@ -1328,7 +1248,8 @@ function RateModal({ task, onClose, onDone, onError }: { task: Task; onClose: ()
   const [stars, setStars] = useState(5)
   const [comment, setComment] = useState('')
   const [busy, setBusy] = useState(false)
-  const worker = typeof task.employer === 'string' ? task.employer : task.taskType || 'the worker'
+  const { workerName, workerId } = dispatchDetails(task)
+  const worker = workerName || (typeof task.employer === 'string' ? task.employer : task.taskType || 'the worker')
 
   const submit = async () => {
     if (busy) return
@@ -1336,34 +1257,22 @@ function RateModal({ task, onClose, onDone, onError }: { task: Task; onClose: ()
     try {
       await tasksApi.complete(task.id)
       await tasksApi.review(task.id, stars, comment).catch(() => null)
-
-      // Tell BeyondX that payment is now due to the worker. Never block the
-      // confirmation itself if the notification fails.
       const emp = session.employer()
-      const { workerName, workerId, paymentRef } = dispatchDetails(task)
       const orgName = (emp?.orgName as string) || 'An employer'
-      contact
-        .send({
-          name: orgName,
-          email: (emp?.email as string) || undefined,
-          phone: (emp?.phone as string) || undefined,
-          message:
-            `${orgName} confirmed the work is complete. Payment is now due to the worker.\n\n` +
-            `Worker: ${workerName || worker}${workerId ? ` (${workerId})` : ''}\n` +
-            `Task: ${task.taskType || '—'}\n` +
-            `Location: ${task.location || '—'}\n` +
-            `Duration: ${task.duration || '—'}\n` +
-            `Worker is owed: GHS ${Number(task.pay || 0).toFixed(2)}\n` +
-            `BeyondX service fee: GHS ${(Number(task.pay || 0) * PLATFORM_FEE).toFixed(2)}\n` +
-            `Employer paid in total: GHS ${(Number(task.pay || 0) * (1 + PLATFORM_FEE)).toFixed(2)}\n` +
-            (paymentRef ? `Employer payment ref: ${paymentRef}\n` : '') +
-            `Employer rating: ${stars}/5\n` +
-            (comment.trim() ? `Employer feedback: ${comment.trim()}\n` : '') +
-            `\nRelease the worker's payment to complete this job.`,
-          category: 'payment_due',
-        })
-        .catch(() => null)
-
+      contact.send({
+        name: orgName,
+        email: (emp?.email as string) || undefined,
+        phone: (emp?.phone as string) || undefined,
+        message:
+          `${orgName} confirmed the work is complete. Payment is now due to the worker.\n\n` +
+          `Worker: ${workerName || worker}${workerId ? ` (${workerId})` : ''}\n` +
+          `Task: ${task.taskType || '—'}\nLocation: ${task.location || '—'}\nDuration: ${task.duration || '—'}\n` +
+          `Worker is owed: GHS ${Number(task.pay || 0).toFixed(2)}\n` +
+          `Employer rating: ${stars}/5\n` +
+          (comment.trim() ? `Feedback: ${comment.trim()}\n` : '') +
+          `\nPlease release the worker's payment to complete this job.`,
+        category: 'payment_due',
+      }).catch(() => null)
       onDone(worker)
     } catch (e) {
       onError(e instanceof ApiError ? e.message : 'Please try again.')
@@ -1372,19 +1281,42 @@ function RateModal({ task, onClose, onDone, onError }: { task: Task; onClose: ()
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/50 p-4" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="rt-title" className="w-full max-w-md rounded-2xl bg-cream-50 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-1 flex items-center justify-between">
-          <h2 id="rt-title" className="font-serif text-xl font-medium text-ink-900">Confirm work &amp; rate</h2>
-          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-ink-700 hover:bg-ink-900/5"><X size={18} aria-hidden="true" /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/60 p-4" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-labelledby="rt-title" className="w-full max-w-sm rounded-2xl bg-cream-50 shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="bg-forest-700 px-6 py-5 text-center">
+          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-cream-50/15">
+            <ShieldCheck size={22} aria-hidden="true" className="text-cream-50" />
+          </div>
+          <h2 id="rt-title" className="font-serif text-lg font-semibold text-cream-50">Confirm the work is done</h2>
+          <p className="mt-1 text-xs text-forest-200/80">{task.taskType}{task.location ? ` · ${task.location}` : ''}</p>
         </div>
-        <p className="mb-4 text-sm text-ink-700">Confirm the work is done and rate it. Once you confirm, BeyondX reviews and releases the payment we are holding to the worker.</p>
-        <StarPicker value={stars} onChange={setStars} />
-        <label htmlFor="rt-comment" className="sr-only">Feedback</label>
-        <textarea id="rt-comment" value={comment} onChange={(e) => setComment(e.target.value)} rows={3} placeholder="Feedback on the work (optional)" className="mt-4 w-full rounded-xl border border-ink-900/15 bg-white p-3 text-sm text-ink-900 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30" />
-        <button onClick={submit} disabled={busy} className="mt-4 w-full rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-600/40">
-          {busy ? 'Confirming…' : 'Confirm work is done'}
-        </button>
+
+        <div className="p-6">
+          <p className="mb-4 text-sm leading-relaxed text-ink-700">
+            Once you confirm, BeyondX will release{' '}
+            <span className="font-semibold text-ink-900">{cedis(task.pay)}</span> to {worker}. This cannot be undone.
+          </p>
+
+          {/* Star rating */}
+          <div className="mb-1 text-xs font-semibold text-ink-700">How was the work?</div>
+          <StarPicker value={stars} onChange={setStars} />
+
+          <label htmlFor="rt-comment" className="sr-only">Optional feedback</label>
+          <textarea id="rt-comment" value={comment} onChange={(e) => setComment(e.target.value)} rows={2}
+            placeholder="Optional feedback for BeyondX (not shown publicly)"
+            className="mt-4 w-full rounded-xl border border-ink-900/12 bg-cream-100 p-3 text-sm text-ink-900 placeholder:text-ink-700/50 outline-none focus:border-forest-600 focus:ring-2 focus:ring-forest-600/25" />
+
+          <div className="mt-4 flex gap-2">
+            <button onClick={onClose} className="flex-1 rounded-full border border-ink-900/15 px-4 py-2.5 text-sm font-medium text-ink-700 hover:bg-ink-900/5">
+              Not yet
+            </button>
+            <button onClick={submit} disabled={busy}
+              className="flex-1 rounded-full bg-forest-600 px-4 py-2.5 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60">
+              {busy ? 'Confirming…' : 'Yes, release payment'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
