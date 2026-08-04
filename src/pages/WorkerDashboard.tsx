@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
-import { MapPin, Calendar, Check, X, Star, RotateCcw, Info, RefreshCw, AlertCircle, Wrench, Award, Briefcase, Camera, Plus, Trash2, Phone, ClipboardList, Wallet } from 'lucide-react'
+import { MapPin, Calendar, Check, X, Star, RotateCcw, Info, RefreshCw, AlertCircle, Wrench, Award, Briefcase, Camera, Plus, Trash2, Phone, Building2, AlertTriangle } from 'lucide-react'
 import DashboardHeader from './DashboardHeader'
 import ReferralCard from '../components/ReferralCard'
 import ProfileModal, { type Profile } from '../components/ProfileModal'
@@ -106,11 +106,9 @@ function FileUploadButton({
 function WorkExperienceCard({
   worker,
   onSaved,
-  onError,
 }: {
   worker: Worker | null
   onSaved: (patch: Record<string, unknown>) => void
-  onError: (msg: string) => void
 }) {
   const workerId = (worker?.workerId as string) || 'worker'
   const [expEntries, setExpEntries] = useState<ExperienceEntry[]>(() =>
@@ -155,9 +153,7 @@ function WorkExperienceCard({
       onSaved(patch)
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
-    } catch (e) {
-      onError(e instanceof ApiError ? e.message : 'Could not save — please try again.')
-    }
+    } catch { /* parent handles errors */ }
     finally { setSaving(false) }
   }
 
@@ -223,11 +219,11 @@ function WorkExperienceCard({
                     <FileUploadButton
                       folder="worker-experience"
                       fileName={`${workerId}-exp-${e.id}`}
-                      label={e.photoUrl ? '📎 Photo attached' : 'Attach photo (private)'}
+                      label={e.photoUrl ? 'Photo attached' : 'Attach photo (private)'}
                       onUploaded={(url) => updateExp(e.id, 'photoUrl', url)}
                     />
                     {e.photoUrl && (
-                      <p className="mt-1 text-[11px] text-forest-700">✓ Photo saved — visible only to BeyondX</p>
+                      <p className="mt-1 flex items-center gap-1 text-[11px] font-medium text-forest-700"><Check size={11} aria-hidden="true" /> Photo saved — visible only to BeyondX</p>
                     )}
                   </div>
                   <button onClick={() => removeExp(e.id)} aria-label="Remove entry"
@@ -276,17 +272,17 @@ function WorkExperienceCard({
                     <FileUploadButton
                       folder="worker-certs"
                       fileName={`${workerId}-cert-${c.id}`}
-                      label={c.imageUrl ? '📎 Certificate attached' : 'Attach certificate image'}
+                      label={c.imageUrl ? 'Certificate attached' : 'Attach certificate image'}
                       onUploaded={(url) => updateCert(c.id, 'imageUrl', url)}
                     />
                     {c.imageUrl && (
                       <p className="mt-1 text-[11px] text-forest-700">
-                        ✓ Image attached — will show on your employer-visible profile once BeyondX reviews it
+                        <span className="flex items-center gap-1"><Check size={11} aria-hidden="true" /> Image attached — shown to employers after BeyondX review</span>
                       </p>
                     )}
                     <div className="mt-2 flex items-center gap-1.5">
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.verified ? 'bg-forest-600/10 text-forest-700' : 'bg-ink-900/8 text-ink-700/70'}`}>
-                        {c.verified ? '✓ BeyondX Verified' : 'Declared — pending BeyondX review'}
+                        {c.verified ? 'BeyondX Verified' : 'Declared — pending review'}
                       </span>
                     </div>
                   </div>
@@ -311,7 +307,7 @@ function WorkExperienceCard({
           </p>
           <button onClick={save} disabled={saving}
             className="rounded-full bg-forest-600 px-5 py-2.5 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60">
-            {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save'}
+            {saving ? 'Saving…' : saved ? 'Saved' : 'Save'}
           </button>
         </div>
       </div>
@@ -327,7 +323,7 @@ function WorkExperienceCard({
 // ---------------------------------------------------------------------------
 const TOOL_RELEVANT = ['Agriculture & Environment', 'Construction, Maintenance & Repairs', 'Facility & Cleaning']
 
-function ToolsStatusCard({ worker, onSaved, onError }: { worker: Worker | null; onSaved: (patch: Record<string, unknown>) => void; onError: (msg: string) => void }) {
+function ToolsStatusCard({ worker, onSaved }: { worker: Worker | null; onSaved: (patch: Record<string, unknown>) => void }) {
   const mySkills = (Array.isArray(worker?.skills) ? worker!.skills as string[] : [])
     .filter((s) => TOOL_RELEVANT.includes(s))
 
@@ -340,8 +336,11 @@ function ToolsStatusCard({ worker, onSaved, onError }: { worker: Worker | null; 
 
   if (mySkills.length === 0) return null   // only show if relevant to their skills
 
+  const [saveErr, setSaveErr] = useState<string | null>(null)
+
   const save = async () => {
     setSaving(true)
+    setSaveErr(null)
     try {
       const patch = { hasTools }
       await workersApi.updateMe(patch)
@@ -349,9 +348,10 @@ function ToolsStatusCard({ worker, onSaved, onError }: { worker: Worker | null; 
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : 'Could not save — please try again.')
+      setSaveErr(e instanceof Error ? e.message : 'Could not save. Please try again.')
+    } finally {
+      setSaving(false)
     }
-    finally { setSaving(false) }
   }
 
   return (
@@ -378,7 +378,7 @@ function ToolsStatusCard({ worker, onSaved, onError }: { worker: Worker | null; 
                     : 'border-ink-900/15 text-ink-700 hover:border-forest-500/40'
                 }`}
               >
-                ✓ Yes, I bring my own tools
+                Yes, I have tools
               </button>
               <button
                 type="button"
@@ -389,7 +389,7 @@ function ToolsStatusCard({ worker, onSaved, onError }: { worker: Worker | null; 
                     : 'border-ink-900/15 text-ink-700 hover:border-ink-900/30'
                 }`}
               >
-                ✗ No, employer provides
+                No, employer provides
               </button>
             </div>
             <button
@@ -398,13 +398,18 @@ function ToolsStatusCard({ worker, onSaved, onError }: { worker: Worker | null; 
               disabled={saving}
               className="rounded-full bg-forest-600 px-5 py-2.5 text-sm font-semibold text-cream-50 transition-all hover:bg-forest-500 active:scale-[0.98] disabled:opacity-60 sm:ml-auto"
             >
-              {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save'}
+              {saving ? 'Saving…' : saved ? 'Saved' : 'Save'}
             </button>
           </div>
 
           {saved && (
-            <p className="mt-2 text-xs text-forest-700">
-              Updated — employers searching for workers with tools will now see this on your profile.
+            <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-forest-700">
+              <Check size={13} aria-hidden="true" /> Saved — employers can now see your tool availability.
+            </p>
+          )}
+          {saveErr && (
+            <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-red-700">
+              <AlertCircle size={13} aria-hidden="true" /> {saveErr}
             </p>
           )}
         </div>
@@ -417,19 +422,6 @@ const cedis = (n?: number | string) => `GH\u20b5 ${Number(n || 0).toLocaleString
 
 const employerName = (t: Task) =>
   typeof t.employer === 'string' ? t.employer : t.employer?.orgName || t.employer?.name || 'BeyondX employer'
-
-const employerContact = (t: Task) => (typeof t.employer === 'object' ? t.employer?.phone : undefined)
-
-// Older dispatched tasks had "Worker: <name> (<id>) | Payment Ref: <ref>"
-// baked into the description instead of the real job description — never
-// show that string to the worker. Newer tasks already carry a clean
-// description and their own paymentRef field, so this only matters for
-// tasks created before that was fixed.
-const LEGACY_DISPATCH_META = /^Worker:\s*[^(|]+\([^)]+\)\s*\|\s*Payment Ref:/i
-const publicDescription = (t: Task) => {
-  const raw = String(t.description || '').trim()
-  return LEGACY_DISPATCH_META.test(raw) ? '' : raw
-}
 
 function Stars({ n }: { n: number }) {
   return (
@@ -471,58 +463,42 @@ function Empty({ text }: { text: string }) {
   return <div className="rounded-xl border border-dashed border-ink-900/15 p-10 text-center text-sm text-ink-700">{text}</div>
 }
 
-function ConfirmDialog({
-  title, message, confirmLabel, busy, onConfirm, onCancel,
-}: {
-  title: string
-  message: string
-  confirmLabel: string
-  busy: boolean
-  onConfirm: () => void
-  onCancel: () => void
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/50 p-4" onClick={onCancel}>
-      <div role="dialog" aria-modal="true" aria-labelledby="confirm-title" className="w-full max-w-sm rounded-2xl bg-cream-50 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <h2 id="confirm-title" className="font-serif text-lg font-medium text-ink-900">{title}</h2>
-        <p className="mt-2 text-sm leading-relaxed text-ink-700">{message}</p>
-        <div className="mt-5 flex gap-2">
-          <button onClick={onCancel} disabled={busy}
-            className="flex-1 rounded-full border border-ink-900/15 px-4 py-2.5 text-sm font-medium text-ink-700 transition-colors hover:bg-ink-900/5 disabled:opacity-60">
-            Cancel
-          </button>
-          <button onClick={onConfirm} disabled={busy}
-            className="flex-1 rounded-full bg-red-600 px-4 py-2.5 text-sm font-semibold text-cream-50 transition-all hover:bg-red-700 active:scale-[0.98] disabled:opacity-60">
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function TaskCard({ task, children }: { task: Task; children?: ReactNode }) {
-  const desc = publicDescription(task)
-  const phone = employerContact(task)
+  const empPhone = typeof task.employer === 'object' ? (task.employer as Record<string, unknown>)?.phone as string | undefined : undefined
+  const empContact = typeof task.employer === 'object' ? (task.employer as Record<string, unknown>)?.contactPerson as string | undefined : undefined
+
   return (
-    <div className="flex flex-col gap-4 rounded-xl bg-cream-50 p-4 shadow-sm ring-1 ring-ink-900/5 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+    <div className="flex flex-col gap-4 rounded-xl bg-cream-50 p-4 shadow-sm ring-1 ring-ink-900/5 sm:p-5">
       <div className="min-w-0">
         <span className="mb-1 inline-block rounded-full bg-forest-600/10 px-2.5 py-0.5 text-xs font-medium text-forest-700">
           {task.taskType || 'Task'}
         </span>
-        <h3 className="font-serif text-lg font-medium text-ink-900">{task.taskType || 'Task'}</h3>
-        {desc && <p className="mt-1 text-sm leading-relaxed text-ink-700">{desc}</p>}
-        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-700">
+        {/* Job description — shown when the employer has added one */}
+        {task.description && task.description !== task.taskType && (
+          <p className="mt-1 text-sm leading-relaxed text-ink-800">{task.description}</p>
+        )}
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-700">
           {task.location && <span className="inline-flex items-center gap-1"><MapPin size={14} aria-hidden="true" /> {task.location}</span>}
           {task.duration && <span className="inline-flex items-center gap-1"><Calendar size={14} aria-hidden="true" /> {task.duration}</span>}
           <span className="font-semibold text-ink-900">{cedis(task.pay)}</span>
         </div>
-        <p className="mt-1 text-xs text-ink-700">
-          Employer · <span className="font-medium text-ink-900">{employerName(task)}</span>
-          {phone && (
-            <> · <a href={`tel:${phone}`} className="inline-flex items-center gap-1 font-medium text-forest-700 hover:underline"><Phone size={11} aria-hidden="true" /> {phone}</a></>
+        {/* Employer info — name, contact person, phone for clarifications */}
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-ink-900/6 pt-2 text-xs text-ink-700">
+          <span className="inline-flex items-center gap-1">
+            <Building2 size={13} aria-hidden="true" />
+            <span className="font-medium text-ink-900">{employerName(task)}</span>
+          </span>
+          {empContact && (
+            <span className="inline-flex items-center gap-1">
+              {empContact}
+            </span>
           )}
-        </p>
+          {empPhone && (
+            <a href={`tel:${empPhone}`} className="inline-flex items-center gap-1 text-forest-700 hover:underline">
+              <Phone size={13} aria-hidden="true" /> {empPhone}
+            </a>
+          )}
+        </div>
       </div>
       {children && <div className="flex shrink-0 gap-2">{children}</div>}
     </div>
@@ -543,7 +519,6 @@ export default function WorkerDashboard() {
   const [editing, setEditing] = useState(false)
   const [announce, setAnnounce] = useState('')
   const [toast, setToast] = useState<ToastMsg>(null)
-  const [confirmingDecline, setConfirmingDecline] = useState<Task | null>(null)
 
   const load = useCallback(async () => {
     setError(null)
@@ -612,39 +587,44 @@ export default function WorkerDashboard() {
       `${employerName(t)} will confirm, then BeyondX releases your payment.`,
     )
 
+  const [confirmDeclineTask, setConfirmDeclineTask] = useState<Task | null>(null)
+
   const declineOffer = async (t: Task) => {
+    // Show the "are you sure?" modal first — set to null to close
+    setConfirmDeclineTask(t)
+  }
+
+  const doDecline = async (t: Task) => {
+    setConfirmDeclineTask(null)
     if (busyId) return
     setBusyId(t.id)
     try {
       await tasksApi.declineOffer(t.id)
       setDeclined((d) => [t, ...d])
-      // Let the employer know right away, and give them a clear choice.
-      contact
-        .send({
-          name: employerName(t),
-          message:
-            `${displayName} has declined the offer for "${t.taskType || 'a task'}"` +
-            `${t.location ? ` in ${t.location}` : ''}.\n\n` +
-            `Would you like BeyondX to dispatch a replacement worker, or process a refund? ` +
-            `Reply to let us know which you'd prefer.`,
-          category: 'task_declined',
-        })
-        .catch(() => null)
-      setToast({ id: Date.now(), kind: 'info', title: 'Offer declined', detail: 'The employer has been notified and asked whether they want a replacement worker or a refund.' })
+      setToast({ id: Date.now(), kind: 'info', title: 'Offer declined', detail: 'The employer has been notified and will decide whether to reassign or request a refund.' })
+      // Notify BeyondX immediately so the team can contact the employer
+      const emp = employerName(t)
+      contact.send({
+        name: displayName,
+        phone: (me?.phone as string) || undefined,
+        message:
+          `Worker ${displayName} (${(me?.workerId as string) || '—'}) DECLINED a task offer.\n\n` +
+          `Task: ${t.taskType || '—'}\n` +
+          `Location: ${t.location || '—'}\n` +
+          `Employer: ${emp}\n` +
+          `Amount: GHS ${Number(t.pay || 0).toFixed(2)}\n\n` +
+          `Action needed: Contact the employer to ask whether they want a replacement worker or a refund of their payment.`,
+        category: 'task_declined',
+      }).catch(() => null)
       await load()
     } catch (e) {
       setToast({ id: Date.now(), kind: 'info', title: 'That did not go through', detail: e instanceof ApiError ? e.message : 'Please try again.' })
     } finally {
       setBusyId(null)
-      setConfirmingDecline(null)
     }
   }
 
-  // Once declined this session, never let it show back up as acceptable —
-  // even if a background refresh still includes it before the backend
-  // catches up.
-  const declinedIds = new Set(declined.map((t) => String(t.id)))
-  const available = [...offers, ...open].filter((t) => !declinedIds.has(String(t.id)))
+  const available = [...offers, ...open]
   const displayName = (me?.fullName as string) || (me?.name as string) || 'Worker'
   const photo = (me?.photoUrl as string) || undefined
   const completed = history.length
@@ -685,24 +665,16 @@ export default function WorkerDashboard() {
         )}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Stat icon={<Star size={20} aria-hidden="true" />} label="Your rating" value={me?.rating && Number(me.rating) > 0 ? `${Number(me.rating).toFixed(1)}` : '—'} />
-          <Stat icon={<ClipboardList size={20} aria-hidden="true" />} label="Tasks completed" value={`${completed}`} />
-          <Stat icon={<Wallet size={20} aria-hidden="true" />} label="Total earned" value={cedis(earned)} />
+          <Stat icon={<Star size={20} />} label="Your rating" value={me?.rating && Number(me.rating) > 0 ? `${Number(me.rating).toFixed(1)}` : '—'} />
+          <Stat icon={<img src="/icons/tasks.png" alt="" className="h-5 w-5 object-contain" />} label="Tasks completed" value={`${completed}`} />
+          <Stat icon={<img src="/icons/wallet.png" alt="" className="h-5 w-5 object-contain" />} label="Total earned" value={cedis(earned)} />
         </div>
 
         <ReferralCard code={(me?.workerId as string) || 'BX-—'} referrals={0} />
 
-        <ToolsStatusCard
-          worker={me}
-          onSaved={(patch) => { session.patchWorker(patch); setMe((m) => ({ ...(m || {}), ...patch })) }}
-          onError={(msg) => setToast({ id: Date.now(), kind: 'info', title: 'Could not save', detail: msg })}
-        />
+        <ToolsStatusCard worker={me} onSaved={(patch) => { session.patchWorker(patch); setMe((m) => ({ ...(m || {}), ...patch })) }} />
 
-        <WorkExperienceCard
-          worker={me}
-          onSaved={(patch) => { session.patchWorker(patch); setMe((m) => ({ ...(m || {}), ...patch })) }}
-          onError={(msg) => setToast({ id: Date.now(), kind: 'info', title: 'Could not save', detail: msg })}
-        />
+        <WorkExperienceCard worker={me} onSaved={(patch) => { session.patchWorker(patch); setMe((m) => ({ ...(m || {}), ...patch })) }} />
 
         <div className="mt-8 flex items-center gap-2 overflow-x-auto border-b border-ink-900/10 pb-px" role="tablist" aria-label="Worker sections">
           {tabs.map((t) => (
@@ -735,7 +707,7 @@ export default function WorkerDashboard() {
                     <Check size={16} aria-hidden="true" /> {busyId === t.id ? 'Working…' : 'Accept'}
                   </button>
                   {t.status === 'offered' && (
-                    <button onClick={() => setConfirmingDecline(t)} disabled={busyId === t.id} aria-label={`Decline ${t.taskType || 'task'}`}
+                    <button onClick={() => declineOffer(t)} disabled={busyId === t.id} aria-label={`Decline ${t.taskType || 'task'}`}
                       className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-ink-900/15 px-4 py-2 text-sm font-medium text-ink-700 transition-colors hover:bg-ink-900/5 disabled:opacity-60 sm:flex-none">
                       <X size={16} aria-hidden="true" /> Decline
                     </button>
@@ -814,15 +786,35 @@ export default function WorkerDashboard() {
 
       <Toast toast={toast} onClose={() => setToast(null)} />
 
-      {confirmingDecline && (
-        <ConfirmDialog
-          title="Decline this offer?"
-          message={`Are you sure you want to decline "${confirmingDecline.taskType || 'this task'}"? Once declined, it moves to your Declined tab and you won't be able to accept it again.`}
-          confirmLabel={busyId === confirmingDecline.id ? 'Declining…' : 'Yes, decline'}
-          busy={busyId === confirmingDecline.id}
-          onCancel={() => setConfirmingDecline(null)}
-          onConfirm={() => declineOffer(confirmingDecline)}
-        />
+      {confirmDeclineTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/60 p-4">
+          <div role="dialog" aria-modal="true" className="w-full max-w-sm rounded-2xl bg-cream-50 p-6 shadow-xl">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+              <AlertTriangle size={22} aria-hidden="true" className="text-red-600" />
+            </div>
+            <h2 className="font-serif text-lg font-medium text-ink-900">Decline this offer?</h2>
+            <p className="mt-2 text-sm leading-relaxed text-ink-700">
+              You're about to decline the <span className="font-semibold">{confirmDeclineTask.taskType}</span> offer
+              {confirmDeclineTask.location ? ` in ${confirmDeclineTask.location}` : ''}. 
+              This cannot be undone — the offer will be closed and the employer will be notified immediately.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setConfirmDeclineTask(null)}
+                className="flex-1 rounded-full border border-ink-900/15 px-4 py-2.5 text-sm font-medium text-ink-800 hover:bg-ink-900/5"
+              >
+                Keep offer
+              </button>
+              <button
+                onClick={() => doDecline(confirmDeclineTask)}
+                disabled={busyId === confirmDeclineTask.id}
+                className="flex-1 rounded-full bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-60"
+              >
+                {busyId === confirmDeclineTask.id ? 'Declining…' : 'Yes, decline'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {editing && (

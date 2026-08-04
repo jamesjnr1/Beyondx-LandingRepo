@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { TrendingUp, Wallet } from 'lucide-react'
+import { TrendingUp } from 'lucide-react'
 import { useReveal } from '../hooks/useReveal'
 
 const ranks = ['Bronze', 'Silver', 'Gold']
@@ -53,7 +53,7 @@ export default function PlatformDesign() {
             className="rounded-2xl border border-ink-900/8 bg-cream-50 p-8 shadow-sm"
           >
             <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-forest-600/10">
-              <Wallet size={22} aria-hidden="true" className="text-forest-600" />
+              <img src="/icons/wallet.png" alt="" className="h-6 w-6 object-contain" />
             </div>
             <h3 className="font-serif text-xl font-semibold text-ink-900">In-App Payments</h3>
             <p className="mt-3 text-sm leading-relaxed text-ink-700">

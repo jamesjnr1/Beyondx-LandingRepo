@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Phone, Send, Headset } from 'lucide-react'
+import { Phone, Send } from 'lucide-react'
 import { contact, session, ApiError } from '../lib/api'
 
 const SUPPORT_PHONE = '0553608309'
@@ -74,12 +74,17 @@ export default function SupportPanel({
   return (
     <div className="mx-auto mt-6 max-w-xl rounded-2xl bg-cream-50 p-6 shadow-sm ring-1 ring-ink-900/5">
       <div className="flex items-start gap-4">
-        <span className="hidden h-13 w-13 shrink-0 items-center justify-center rounded-xl bg-forest-600/10 text-forest-600 sm:flex" style={{ width: 52, height: 52 }}>
-          <Headset size={26} aria-hidden="true" />
-        </span>
+        <img
+          src="/icons/support.png"
+          alt=""
+          width={52}
+          height={52}
+          className="hidden h-13 w-13 shrink-0 object-contain sm:block"
+          style={{ width: 52, height: 52 }}
+        />
         <div className="min-w-0">
           <h2 className="flex items-center gap-2 font-serif text-xl font-medium text-ink-900">
-            <Headset size={20} aria-hidden="true" className="text-forest-600 sm:hidden" />
+            <img src="/icons/support.png" alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain sm:hidden" />
             Support &amp; Reporting
           </h2>
           <p className="mt-1 text-sm leading-relaxed text-ink-700">

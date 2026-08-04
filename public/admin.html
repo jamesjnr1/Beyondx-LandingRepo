@@ -766,11 +766,7 @@ function vpCard(t){
 async function verifyPayment(taskId, workerName){
   if(!confirm('Confirm you have received the payment for this task. This will notify the worker and offer them the job.')) return;
   try{
-    // This route is a Vercel rewrite → /api/admin-verify-payment, which then
-    // talks to Railway with the admin service key. It must be called on our
-    // own origin (relative path) — calling the Railway API base directly
-    // skips the rewrite and 404s, which is why this used to silently fail.
-    const r=await fetch('/admin/tasks/'+taskId+'/verify-payment',{
+    const r=await fetch(API+'/admin/tasks/'+taskId+'/verify-payment',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-admin-password':pass},
       body:JSON.stringify({action:'approve'})
@@ -788,8 +784,7 @@ async function rejectPayment(taskId){
   const reason=prompt('Reason for rejection (shown to employer):','Payment reference not found or amount incorrect.');
   if(!reason) return;
   try{
-    // Relative path — see note in verifyPayment() above.
-    const r=await fetch('/admin/tasks/'+taskId+'/verify-payment',{
+    const r=await fetch(API+'/admin/tasks/'+taskId+'/verify-payment',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-admin-password':pass},
       body:JSON.stringify({action:'reject',reason})
